@@ -1,0 +1,9 @@
+node_modules/
+.DS_Store
+*.log
+# локальные артефакты прогонов
+/tests/e2e/out/
+/.tmp/
+
+# снимки экранов, которые делает tests/e2e/screenshots.mjs
+/screenshots/

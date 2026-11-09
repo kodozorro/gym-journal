@@ -1,0 +1,18 @@
+{
+  "name": "gym-journal",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "PWA «Журнал тренировок» поверх Google Таблицы",
+  "scripts": {
+    "dev": "node tools/dev-server.mjs --mock",
+    "stamp": "node tools/stamp.mjs",
+    "icons": "node tools/make-icons.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "test:e2e": "node --test tests/e2e/*.test.mjs",
+    "check": "node tools/stamp.mjs --check && node --test tests/*.test.mjs && node --test tests/e2e/*.test.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
