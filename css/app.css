@@ -649,17 +649,40 @@ svg {
   gap: 12px;
 }
 
-.ex__head {
+/* заголовок карточки: слева название, оно же кнопка «свернуть и развернуть», справа «i» */
+.ex__top {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
-  width: 100%;
+}
+
+.ex__head {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 44px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  align-content: flex-start;
+  gap: 2px 10px;
   text-align: left;
 }
 
+/* ширина названия считается от нуля: иначе длинное название столкнёт план и стрелку на вторую строку */
 .ex__names {
-  flex: 1 1 auto;
+  flex: 1 1 0;
   min-width: 0;
+}
+
+/* тренажёр и уточнение плана — отдельной строкой под названием, во всю ширину заголовка */
+.ex__head > .ex__meta {
+  flex: 0 0 100%;
+  margin-top: 0;
+}
+
+/* значок стоит на уровне названия, а место под палец — 44 px: лишнее уходит в отрицательные поля */
+.ex__info {
+  margin: -10px -10px -10px -6px;
+  color: var(--accent-text);
 }
 
 .ex__title,
@@ -705,9 +728,18 @@ svg {
   padding-bottom: 12px;
 }
 
+.ex--closed .ex__top,
 .ex--closed .ex__head {
   align-items: center;
-  min-height: 44px;
+}
+
+.ex--closed .ex__head {
+  align-content: center;
+}
+
+.ex--closed .ex__info {
+  margin-top: 0;
+  margin-bottom: 0;
 }
 
 .ex__summary {
@@ -1980,6 +2012,57 @@ textarea.input {
   text-align: right;
   font-weight: 600;
   overflow-wrap: anywhere;
+}
+
+/* справка об упражнении: фото тренажёра, рисунок, подсказки */
+
+/* лист длиннее экрана и прокручивается: его части не должны сжиматься по высоте */
+.info {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.info + .info {
+  margin-top: 4px;
+}
+
+/* у фотографий белый фон: панель белая в обеих темах, подпись на случай, если файл не загрузился, тёмная */
+.info__photo {
+  flex: none;
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 3;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-s);
+  background: #ffffff;
+  color: #0b0b0b;
+  font-size: 14px;
+}
+
+/* фон рисунка тот же, что у просветов внутри него (.art__halo) */
+.info__art {
+  flex: none;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-s);
+  background: var(--page);
+  overflow: hidden;
+}
+
+.info__cap {
+  color: var(--ink-2);
+  font-size: 14px;
+}
+
+.info__text,
+.info .steps {
+  font-size: 16px;
+}
+
+.info .btn {
+  align-self: flex-start;
 }
 
 /* ---------- Рисунки упражнений ---------- */

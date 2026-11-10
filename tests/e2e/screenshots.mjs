@@ -56,7 +56,21 @@ scene('01-today', 'Сегодня: пара упражнений, вес и по
   await app.synced();
 });
 
-scene('02-round', 'Круг пары записан: пошёл отдых', async (app) => {
+scene('02-info', 'Кнопка «i»: фото тренажёра и рисунок упражнения', async (app) => {
+  const { page } = app;
+  await app.card(ROW).getByRole('button', { name: /^Фото и техника/ }).click();
+  await page.locator('dialog.sheet[open] .info__photo').evaluate((img) => img.decode());
+  await app.tick(300);
+});
+
+scene('03-info-how', 'Там же ниже: что работает и как делать', async (app) => {
+  await app.page.locator('dialog.sheet[open] .sheet__body').evaluate((el) => el.scrollTo(0, el.scrollHeight));
+  await app.tick(300);
+});
+
+scene('04-round', 'Круг пары записан: пошёл отдых', async (app) => {
+  await press(app.page, 'Понятно');
+  await closed(app.page);
   await app.rep(CURL, 12).click();
   await app.rep(ROW, 12).click();
   await app.page.locator('.timer').waitFor();
@@ -64,12 +78,12 @@ scene('02-round', 'Круг пары записан: пошёл отдых', asy
   await app.tick(20_000);
 });
 
-scene('03-weight', 'Ввод веса: своя клавиатура, шаг кнопок «+» и «−»', async (app) => {
+scene('05-weight', 'Ввод веса: своя клавиатура, шаг кнопок «+» и «−»', async (app) => {
   await app.card(ROW).locator('.weight__value').click();
   await keys(app.page, '27,5');
 });
 
-scene('04-next-pair', 'Пара закончена: записанное свернулось, открылась следующая', async (app) => {
+scene('06-next-pair', 'Пара закончена: записанное свернулось, открылась следующая', async (app) => {
   const { page } = app;
   await press(page, 'Готово');
   await closed(page);
@@ -82,7 +96,7 @@ scene('04-next-pair', 'Пара закончена: записанное све�
   await app.tick(600);
 });
 
-scene('05-walk', 'Ходьба: отрезки до и после силовой складываются', async (app) => {
+scene('07-walk', 'Ходьба: отрезки до и после силовой складываются', async (app) => {
   const { page } = app;
   const walk = app.card(WALK);
   await walk.getByRole('button', { name: 'Добавить отрезок' }).click();
@@ -97,7 +111,7 @@ scene('05-walk', 'Ходьба: отрезки до и после силовой
   await keys(page, '1,5');
 });
 
-scene('06-offline', 'Нет сети: запись ждёт в очереди', async (app) => {
+scene('08-offline', 'Нет сети: запись ждёт в очереди', async (app) => {
   const { page, context } = app;
   await press(page, 'Закрыть');
   await closed(page);
@@ -111,7 +125,7 @@ scene('06-offline', 'Нет сети: запись ждёт в очереди', 
   await page.locator('dialog.sheet[open] .kv').waitFor();
 });
 
-scene('07-plan', 'План: недели программы, сделанное и сегодняшний день', async (app) => {
+scene('09-plan', 'План: недели программы, сделанное и сегодняшний день', async (app) => {
   const { page, context } = app;
   await press(page, 'Закрыть');
   await closed(page);
@@ -123,14 +137,14 @@ scene('07-plan', 'План: недели программы, сделанное 
   await app.tick(300);
 });
 
-scene('08-other-day', 'Пропущенный день можно записать позже', async (app) => {
+scene('10-other-day', 'Пропущенный день можно записать позже', async (app) => {
   const { page } = app;
   await page.locator(`.day-row[href="#/day/${SKIPPED}"]`).click();
   await page.locator('.banner', { hasText: 'Запись за' }).waitFor();
   await app.tick(300);
 });
 
-scene('09-progress', 'Прогресс: неделя и лучший вес по упражнению', async (app) => {
+scene('11-progress', 'Прогресс: неделя и лучший вес по упражнению', async (app) => {
   const { page } = app;
   await tab(page, 'Прогресс');
   await page.locator('.chart svg').first().waitFor();
@@ -141,25 +155,25 @@ scene('09-progress', 'Прогресс: неделя и лучший вес по
   await page.locator('.chart__tip').waitFor();
 });
 
-scene('10-progress-walk', 'Прогресс: ходьба по неделям и цель', async (app) => {
+scene('12-progress-walk', 'Прогресс: ходьба по неделям и цель', async (app) => {
   const { page } = app;
   await page.locator('.chart-card').nth(1).evaluate((el) => el.scrollIntoView({ block: 'end' }));
   await app.tick(300);
 });
 
-scene('11-settings', 'Настройки: таблица, отдых, шаг веса', async (app) => {
+scene('13-settings', 'Настройки: таблица, отдых, шаг веса', async (app) => {
   const { page } = app;
   await tab(page, 'Настройки');
   await page.getByRole('heading', { name: 'Тренировка' }).waitFor();
   await app.tick(300);
 });
 
-scene('12-settings-app', 'Настройки: тема, работа без сети, версия', async (app) => {
+scene('14-settings-app', 'Настройки: тема, работа без сети, версия', async (app) => {
   await scrollTo(app.page, 'end');
   await app.tick(300);
 });
 
-scene('13-connect', 'Первое подключение: адрес скрипта и ключ', async (app) => {
+scene('15-connect', 'Первое подключение: адрес скрипта и ключ', async (app) => {
   const { page } = app;
   await page.getByRole('button', { name: 'Отключить таблицу' }).click();
   await press(page, 'Отключить');
@@ -169,7 +183,7 @@ scene('13-connect', 'Первое подключение: адрес скрип�
   await app.tick(3500);
 });
 
-scene('14-welcome', 'Первый запуск', async (app) => {
+scene('16-welcome', 'Первый запуск', async (app) => {
   const { page } = app;
   await tab(page, 'Сегодня');
   await page.getByRole('heading', { name: 'Подключите таблицу' }).waitFor();

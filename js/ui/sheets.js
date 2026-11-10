@@ -1,11 +1,14 @@
-// Нижние листы: цифровая клавиатура, заметка, состояние синхронизации, подтверждение.
+// Нижние листы: цифровая клавиатура, заметка, состояние синхронизации, справка об упражнении,
+// подтверждение.
 // Лист — это системный <dialog>: он сам запирает фокус внутри и закрывается по Esc.
 
 import { h, cx } from './vdom.js';
 import { icon } from './icons.js';
+import { art } from './art.js';
 import { fmt } from './parts.js';
 import { failedList, formatMoment, syncText } from './settings.js';
 import { STEP_CHOICES } from '../data/store.js';
+import { guideFor } from '../core/guide.js';
 
 const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', ',', '0', 'back'];
 
@@ -17,6 +20,7 @@ export function sheetView(ctx) {
   if (sheet.type === 'keypad') body = keypadBody(ctx, sheet);
   else if (sheet.type === 'note') body = noteBody(ctx, sheet);
   else if (sheet.type === 'sync') body = syncBody(ctx);
+  else if (sheet.type === 'info') body = infoBody(ctx, sheet);
   else body = confirmBody(ctx, sheet);
 
   return h('dialog', {
@@ -136,6 +140,51 @@ function syncBody(ctx) {
         ? h('button', { class: 'btn btn--primary', type: 'button', key: 'sync', disabled: state.phase === 'syncing', onClick: act.syncNow },
           state.phase === 'syncing' ? 'Обмен…' : 'Обновить')
         : null),
+  ];
+}
+
+/** Кнопка «i»: как выглядит тренажёр и как на нём делать упражнение. Чего в справочнике нет, то не показывается. */
+function infoBody(ctx, sheet) {
+  const { act } = ctx;
+  const guide = guideFor(sheet);
+  const drawing = guide.art ? art(guide.art, `Рисунок упражнения: ${sheet.exercise}`) : null;
+  return [
+    guide.photo || guide.search
+      ? h('section', { class: 'info', key: 'machine' },
+        h('h3', { class: 'sheet__cap' }, 'Тренажёр'),
+        guide.photo
+          ? h('img', {
+            class: 'info__photo', src: guide.photo.src, width: guide.photo.width, height: guide.photo.height,
+            alt: `Фото тренажёра: ${guide.machine}`, decoding: 'async',
+          })
+          : h('p', { class: 'info__text' }, 'Фото этого тренажёра в приложении нет.'),
+        guide.look ? h('p', { class: 'info__cap' }, guide.look) : null,
+        guide.search
+          ? h('a', { class: 'btn btn--soft', href: guide.search, target: '_blank', rel: 'noopener noreferrer' }, 'Найти фото в интернете', icon('link'))
+          : null)
+      : null,
+    drawing
+      ? h('section', { class: 'info', key: 'move' },
+        h('h3', { class: 'sheet__cap' }, 'Упражнение'),
+        h('div', { class: 'info__art' }, drawing),
+        h('p', { class: 'info__cap' }, [guide.view, guide.legend].filter(Boolean).join(' ')))
+      : null,
+    guide.muscles
+      ? h('section', { class: 'info', key: 'muscles' },
+        h('h3', { class: 'sheet__cap' }, 'Что работает'),
+        h('p', { class: 'info__text' }, guide.muscles))
+      : null,
+    guide.steps.length
+      ? h('section', { class: 'info', key: 'steps' },
+        h('h3', { class: 'sheet__cap' }, 'Как делать'),
+        h('ol', { class: 'steps' }, guide.steps.map((step, i) => h('li', { key: i }, h('span', null, step)))))
+      : null,
+    guide.rule ? h('p', { class: 'banner', key: 'rule' }, guide.rule) : null,
+    drawing || guide.steps.length
+      ? null
+      : h('p', { class: 'sheet__text', key: 'none' }, 'Рисунка и описания для этого упражнения в приложении пока нет.'),
+    h('div', { class: 'sheet__actions', key: 'actions' },
+      h('button', { class: 'btn btn--primary', type: 'button', key: 'ok', onClick: act.closeSheet }, 'Понятно')),
   ];
 }
 

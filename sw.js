@@ -7,7 +7,7 @@
 // Новая версия ставится рядом со старой и ждёт: страница сама решает, когда перейти.
 
 /* stamp:begin — блок пишет tools/stamp.mjs, руками не править */
-const VERSION = "1.0.0+11ecc4df4f";
+const VERSION = "1.1.0+72f7518bab";
 const FILES = [
   "./",
   "css/app.css",

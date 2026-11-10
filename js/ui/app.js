@@ -721,6 +721,11 @@ export function createApp({ root, storage, store, sync, feedback, pwa, env }) {
       openSheet({ type: 'sync', title: 'Синхронизация с таблицей' });
     },
 
+    /** Кнопка «i» в карточке: фото тренажёра, рисунок и техника упражнения. */
+    openInfo(row) {
+      openSheet({ type: 'info', title: row.exercise, sub: row.machine, exercise: row.exercise, machine: row.machine });
+    },
+
     closeSheet,
 
     sheetClosed() {

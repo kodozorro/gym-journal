@@ -269,6 +269,16 @@ function lastLine(last) {
   return h('p', { class: 'ex__last', key: 'last' }, 'Прошлый раз: ', h('b', null, summarize(last, fmt)), `, ${formatSheetDay(last.date)}`);
 }
 
+/**
+ * Кнопка «i»: фото тренажёра, рисунок и техника упражнения. Стоит рядом с заголовком карточки,
+ * а не внутри него: заголовок сам кнопка, а кнопка в кнопке не работает.
+ */
+function infoButton(ctx, row) {
+  return h('button', {
+    class: 'icon-btn ex__info', type: 'button', 'aria-label': `Фото и техника: ${row.exercise}`, onClick: () => ctx.act.openInfo(row),
+  }, icon('info'));
+}
+
 function footer(ctx, row) {
   return h('div', { class: 'ex__foot', key: 'foot' },
     h('button', { class: cx('note-btn', row.note && 'note-btn--has'), type: 'button', onClick: () => ctx.act.openNote(row) },
@@ -291,14 +301,18 @@ function exerciseCard(ctx, row, pairIndex, inActivePair) {
     : [plan.unknown ? row.plan : `${plan.sets} × ${rangeText(plan)}`, last && last.weight != null ? `прошлый раз ${fmt(last.weight)} кг` : '']
       .filter(Boolean).join(' · ');
 
-  const head = h('button',
-    { class: 'ex__head', key: 'head', type: 'button', 'aria-expanded': String(open), onClick: () => act.toggleCard(row, pairIndex, !open) },
-    h('span', { class: 'ex__names' },
-      h('span', { class: 'ex__title' }, row.exercise),
-      open ? (meta ? h('span', { class: 'ex__meta' }, meta) : null) : h('span', { class: 'ex__summary' }, closedText)),
-    done ? h('span', { class: 'ex__check' }, icon('check'), h('span', { class: 'sr-only' }, 'записано')) : null,
-    open && !plan.unknown ? h('span', { class: 'plan-chip' }, `${plan.sets} × ${rangeText(plan)}`) : null,
-    h('span', { class: 'ex__chev' }, icon(open ? 'chevronUp' : 'chevronDown')));
+  // тренажёр идёт отдельной строкой под названием, во всю ширину заголовка
+  const head = h('div', { class: 'ex__top', key: 'head' },
+    h('button',
+      { class: 'ex__head', type: 'button', 'aria-expanded': String(open), onClick: () => act.toggleCard(row, pairIndex, !open) },
+      h('span', { class: 'ex__names' },
+        h('span', { class: 'ex__title' }, row.exercise),
+        open ? null : h('span', { class: 'ex__summary' }, closedText)),
+      done ? h('span', { class: 'ex__check' }, icon('check'), h('span', { class: 'sr-only' }, 'записано')) : null,
+      open && !plan.unknown ? h('span', { class: 'plan-chip' }, `${plan.sets} × ${rangeText(plan)}`) : null,
+      h('span', { class: 'ex__chev' }, icon(open ? 'chevronUp' : 'chevronDown')),
+      open && meta ? h('span', { class: 'ex__meta' }, meta) : null),
+    infoButton(ctx, row));
 
   if (!open) {
     return h('article', { class: 'card ex ex--closed', key, 'data-key': key, 'aria-label': row.exercise }, head);
@@ -414,11 +428,12 @@ function walkCard(ctx, row) {
   h('span', { class: 'tile-btn__value' }, value == null ? '—' : fmt(value)));
 
   return h('article', { class: 'card ex', key, 'data-key': key, 'aria-label': row.exercise },
-    h('div', { class: 'ex__head', key: 'head' },
-      h('div', { class: 'ex__names' },
-        h('h4', { class: 'ex__title' }, row.exercise),
+    h('div', { class: 'ex__top', key: 'head' },
+      h('div', { class: 'ex__head' },
+        h('div', { class: 'ex__names' }, h('h4', { class: 'ex__title' }, row.exercise)),
+        isDone(row) ? h('span', { class: 'ex__check' }, icon('check'), h('span', { class: 'sr-only' }, 'записано')) : null,
         h('p', { class: 'ex__meta' }, [row.machine, row.plan].filter(Boolean).join(' · '))),
-      isDone(row) ? h('span', { class: 'ex__check' }, icon('check'), h('span', { class: 'sr-only' }, 'записано')) : null),
+      infoButton(ctx, row)),
     lastLine(last),
     h('div', { class: 'walk__tiles', key: 'tiles' }, tile('Километры', row.km, 'km'), tile('Минуты', row.min, 'min')),
     pace ? h('p', { class: 'walk__pace', key: 'pace' }, `Темп ${pace.pace} мин/км · ${fmt(pace.speed, 1)} км/ч`) : null,

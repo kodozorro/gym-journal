@@ -439,6 +439,102 @@ test('правки в таблице видны после обновления;
 }));
 
 /* ------------------------------------------------------------------ */
+/* Справка об упражнении                                               */
+/* ------------------------------------------------------------------ */
+
+const infoButton = (card) => card.getByRole('button', { name: /^Фото и техника/ });
+
+test('кнопка «i»: фото тренажёра, рисунок и техника упражнения; без сети тоже', options, () => withApp({}, async (app) => {
+  const { page, context, spreadsheet, journal } = app;
+  const rows = journalRows(spreadsheet).filter((row) => row.date === TODAY);
+  const machine = (name) => rows.find((row) => row.exercise === name).machine;
+  const info = sheet(page);
+  /** Размер загруженного фото; если файл не пришёл, проверка падает. */
+  const photoSize = () => info.locator('.info__photo').evaluate((img) => img.decode().then(() => [img.naturalWidth, img.naturalHeight]));
+  const drawing = () => info.locator('svg.art').evaluate((svg) => svg.outerHTML);
+  const close = async (name) => {
+    await press(page, name);
+    await sheetGone(page);
+  };
+  await ready(app);
+  await app.synced();
+  assert.equal(await page.locator('.ex__info').count(), rows.length, 'кнопка есть у каждого упражнения дня');
+
+  // раскрытая карточка: в окне название, тренажёр, его фото, рисунок, мышцы и шаги
+  await infoButton(app.card(CURL)).click();
+  await info.getByRole('heading', { name: CURL }).waitFor();
+  assert.equal(await text(info.locator('.sheet__title small')), machine(CURL));
+  assert.deepEqual(await texts(info.locator('.sheet__cap')), ['Тренажёр', 'Упражнение', 'Что работает', 'Как делать']);
+  assert.deepEqual(await photoSize(), [800, 600]);
+  assert.equal(await info.locator('.info__photo').getAttribute('src'), 'img/machines/leg-curl.webp');
+  assert.equal(await info.locator('.info__photo').getAttribute('alt'), `Фото тренажёра: ${machine(CURL)}`);
+  assert.equal(await info.locator('svg.art').getAttribute('aria-label'), `Рисунок упражнения: ${CURL}`);
+  assert.equal(await text(info.locator('.info__cap').nth(1)), 'Яркая и бледная фигуры — крайние положения, стрелка — рабочее усилие.');
+  assert.equal(await text(info.locator('.info__text')), 'Задняя поверхность бедра.');
+  assert.equal(await info.locator('.steps li').count(), 3);
+  assert.match(await text(info.locator('.banner')), /2–3 повтора в запасе/);
+  await close('Понятно');
+  assert.equal(await app.card(CURL).locator('.ex__head').getAttribute('aria-expanded'), 'true', 'карточка осталась раскрытой');
+
+  // свёрнутая карточка: окно открывается, а карточка не разворачивается
+  await infoButton(app.card(FLY)).click();
+  await info.getByRole('heading', { name: FLY }).waitFor();
+  assert.match(await text(info.locator('.info__cap').nth(1)), /^Вид сверху\. /);
+  const fly = { photo: await info.locator('.info__photo').getAttribute('src'), drawing: await drawing() };
+  await close('Закрыть');
+  assert.equal(await app.card(FLY).locator('.ex__head').getAttribute('aria-expanded'), 'false');
+
+  // два упражнения на одном тренажёре: фото то же, рисунок и подсказки свои
+  await infoButton(app.card('Обратные разведения')).click();
+  await info.getByRole('heading', { name: 'Обратные разведения' }).waitFor();
+  assert.equal(await info.locator('.info__photo').getAttribute('src'), fly.photo);
+  assert.notEqual(await drawing(), fly.drawing);
+  assert.equal(await text(info.locator('.info__text')), 'Задняя часть плеч и мышцы между лопатками.');
+  await page.keyboard.press('Escape');
+  await sheetGone(page);
+
+  // ходьба: фото дорожки нет, рисунок и подсказки есть, правило о запасе повторов к ней не относится
+  await infoButton(app.card(WALK)).click();
+  await info.locator('svg.art').waitFor();
+  assert.deepEqual(await texts(info.locator('.sheet__cap')), ['Упражнение', 'Что работает', 'Как делать']);
+  assert.equal(await info.locator('.info__photo').count(), 0);
+  assert.equal(await info.locator('.banner').count(), 0);
+  await close('Закрыть');
+
+  // в таблице появился тренажёр, которого в справочнике нет: чужая картинка не подставляется
+  journal.manualEdit(findRow(spreadsheet, TODAY, HACK).row, 11, 'Smith Machine');
+  await page.locator('.pill').click();
+  await press(page, 'Обновить');
+  await close('Закрыть');
+  await expand(app.card(HACK));
+  await eventually(async () => assert.equal(await text(app.card(HACK).locator('.ex__meta')), 'Smith Machine'));
+  await infoButton(app.card(HACK)).click();
+  await info.getByText('Фото этого тренажёра в приложении нет.').waitFor();
+  await info.getByText('Рисунка и описания для этого упражнения в приложении пока нет.').waitFor();
+  assert.equal(await info.locator('.info__photo, svg.art, .steps, .banner').count(), 0);
+  const link = info.getByRole('link', { name: 'Найти фото в интернете' });
+  assert.equal(await link.getAttribute('href'), 'https://www.google.com/search?tbm=isch&q=Smith%20Machine');
+  assert.equal(await link.getAttribute('target'), '_blank');
+  assert.equal(await link.getAttribute('rel'), 'noopener noreferrer');
+  await close('Понятно');
+
+  // без сети фото берётся из памяти телефона: это фото страница ещё не запрашивала
+  await page.evaluate(() => navigator.serviceWorker.ready.then(() => true));
+  await page.reload();
+  await page.locator('.day-head').waitFor();
+  assert.equal(await page.evaluate(() => Boolean(navigator.serviceWorker.controller)), true, 'страницу ведёт сервис-воркер');
+  await context.setOffline(true);
+  await infoButton(app.card(ROW)).click();
+  await info.getByRole('heading', { name: ROW }).waitFor();
+  assert.equal(await info.locator('.info__photo').getAttribute('src'), 'img/machines/low-pulley.webp');
+  assert.deepEqual(await photoSize(), [800, 600]);
+  await close('Закрыть');
+
+  assert.equal(journal.writes.length, 0, 'справка ничего не пишет в таблицу');
+  assert.deepEqual(unexpected(app), []);
+}));
+
+/* ------------------------------------------------------------------ */
 /* Без сети                                                            */
 /* ------------------------------------------------------------------ */
 
@@ -921,6 +1017,12 @@ for (const width of [360, 390, 430]) {
       await closeSheet();
       await page.locator('.pill').click();
       await checkLayout(page, 'синхронизация', sheet(page).locator('.kv'));
+      await closeSheet();
+      await infoButton(app.card(ROW)).click();
+      await sheet(page).locator('.info__photo').evaluate((img) => img.decode());
+      await checkLayout(page, 'справка об упражнении', sheet(page).locator('svg.art'));
+      await sheet(page).locator('.sheet__body').evaluate((el) => el.scrollTo(0, el.scrollHeight));
+      await checkLayout(page, 'справка об упражнении, конец', sheet(page).getByRole('button', { name: 'Понятно' }));
       await closeSheet();
 
       await tab(page, 'План').click();
