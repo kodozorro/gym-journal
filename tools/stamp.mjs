@@ -14,7 +14,7 @@ import { fileURLToPath } from 'node:url';
 export const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 /** Папки и файлы, из которых состоит приложение на телефоне. */
-const APP_DIRS = ['css', 'js', 'icons'];
+const APP_DIRS = ['css', 'js', 'icons', 'img'];
 const APP_FILES = ['manifest.webmanifest'];
 const VERSION_FILE = 'js/version.js';
 const SW_FILE = 'sw.js';

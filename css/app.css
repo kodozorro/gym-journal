@@ -29,6 +29,7 @@
   --danger-fill: #c23030;
   --danger-soft: #fbe5e5;
   --danger-soft-ink: #9b1f1f;
+  --art-move: #c8372d;
   --scrim: rgba(11, 11, 11, 0.45);
   --shadow: 0 8px 28px rgba(11, 11, 11, 0.18);
 
@@ -66,6 +67,7 @@
     --danger-fill: #c23030;
     --danger-soft: #3b1616;
     --danger-soft-ink: #f5a3a3;
+    --art-move: #eb6156;
     --scrim: rgba(0, 0, 0, 0.6);
     --shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
   }
@@ -97,6 +99,7 @@
   --danger-fill: #c23030;
   --danger-soft: #3b1616;
   --danger-soft-ink: #f5a3a3;
+  --art-move: #eb6156;
   --scrim: rgba(0, 0, 0, 0.6);
   --shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
 }
@@ -1977,6 +1980,101 @@ textarea.input {
   text-align: right;
   font-weight: 600;
   overflow-wrap: anywhere;
+}
+
+/* ---------- Рисунки упражнений ---------- */
+
+/* Цвет задаёт класс, толщину линии — сам рисунок (js/ui/art.js). Холст 320 × 240. */
+.art {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 3;
+}
+
+.art__frame,
+.art__pad,
+.art__move,
+.art__body,
+.art__halo,
+.art__cable,
+.art__floor,
+.art__arrow {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.art__floor,
+.art__frame {
+  stroke: var(--line-strong);
+}
+
+.art__pad,
+.art__cable {
+  stroke: var(--ink-3);
+}
+
+.art__move {
+  stroke: var(--art-move);
+}
+
+.art__body {
+  stroke: var(--ink);
+}
+
+/* просвет вокруг руки, чтобы она не сливалась с корпусом */
+.art__halo {
+  stroke: var(--page);
+}
+
+.art__arrow {
+  stroke: var(--mark);
+}
+
+.art__fill-body {
+  fill: var(--ink);
+}
+
+.art__fill-pad {
+  fill: var(--ink-3);
+}
+
+.art__fill-move {
+  fill: var(--art-move);
+}
+
+.art__fill-arrow {
+  fill: var(--mark);
+}
+
+.art__fill-panel {
+  fill: var(--page);
+}
+
+.art__head {
+  fill: var(--ink);
+  stroke: var(--page);
+}
+
+.art__tower,
+.art__seat {
+  fill: var(--surface);
+  stroke: var(--line-strong);
+}
+
+.art__hub {
+  fill: var(--page);
+  stroke: var(--ink-3);
+}
+
+/* второе крайнее положение */
+.art__ghost {
+  opacity: 0.3;
+}
+
+/* то, что на виде сверху лежит ниже рук */
+.art__below {
+  opacity: 0.5;
 }
 
 /* ---------- Узкие экраны и движение ---------- */

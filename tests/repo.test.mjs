@@ -9,7 +9,7 @@ import { ROOT } from './helpers.mjs';
 import { appFiles, stale } from '../tools/stamp.mjs';
 
 const SKIP_DIRS = new Set(['.git', 'node_modules', '.tmp', 'out']);
-const BINARY = new Set(['.png', '.jpg', '.jpeg', '.gif', '.ico', '.woff', '.woff2', '.pdf']);
+const BINARY = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.ico', '.woff', '.woff2', '.pdf']);
 
 function walk(dir = '') {
   const out = [];
@@ -200,6 +200,8 @@ const PAIRS = [
   ['--surface', '--ink', 4.5],
   ['--mark', '--surface', 3], ['--mark', '--mark-track', 1.5],
   ['--line-strong', '--surface', 3], ['--line-strong', '--page', 3],
+  // рисунки упражнений лежат на фоне страницы
+  ['--art-move', '--page', 3], ['--mark', '--page', 3],
 ];
 
 for (const [name, theme] of [['светлая', light], ['тёмная', darkForced]]) {

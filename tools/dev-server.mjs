@@ -32,11 +32,12 @@ const TYPES = {
   '.webmanifest': 'application/manifest+json; charset=utf-8',
   '.svg': 'image/svg+xml',
   '.png': 'image/png',
+  '.webp': 'image/webp',
   '.ico': 'image/x-icon',
 };
 
 // Только то, из чего состоит приложение: тесты, инструменты и .git наружу не отдаются.
-const PUBLIC = /^(?:index\.html|manifest\.webmanifest|sw\.js|(?:css|js|icons)\/[A-Za-z0-9._/-]+)$/;
+const PUBLIC = /^(?:index\.html|manifest\.webmanifest|sw\.js|(?:css|js|icons|img)\/[A-Za-z0-9._/-]+)$/;
 
 function listen(server, port) {
   return new Promise((resolve, reject) => {

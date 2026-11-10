@@ -7,7 +7,7 @@
 // Новая версия ставится рядом со старой и ждёт: страница сама решает, когда перейти.
 
 /* stamp:begin — блок пишет tools/stamp.mjs, руками не править */
-const VERSION = "1.0.0+776e04919b";
+const VERSION = "1.0.0+11ecc4df4f";
 const FILES = [
   "./",
   "css/app.css",
@@ -16,8 +16,18 @@ const FILES = [
   "icons/icon-512.png",
   "icons/icon-maskable-512.png",
   "icons/icon.svg",
+  "img/machines/chest-press.webp",
+  "img/machines/hack-press.webp",
+  "img/machines/lateral-raise.webp",
+  "img/machines/leg-curl.webp",
+  "img/machines/leg-press.webp",
+  "img/machines/low-pulley.webp",
+  "img/machines/pec-deck.webp",
+  "img/machines/seated-leg-press.webp",
+  "img/machines/shoulder-press.webp",
   "js/boot.js",
   "js/core/dates.js",
+  "js/core/guide.js",
   "js/core/journal.js",
   "js/core/keypad.js",
   "js/core/numbers.js",
@@ -34,6 +44,7 @@ const FILES = [
   "js/platform/feedback.js",
   "js/platform/pwa.js",
   "js/ui/app.js",
+  "js/ui/art.js",
   "js/ui/chart.js",
   "js/ui/day.js",
   "js/ui/icons.js",
