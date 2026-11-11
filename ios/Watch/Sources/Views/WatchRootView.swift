@@ -219,7 +219,7 @@ private struct ExerciseRow: View {
                     Text(row.exercise)
                         .font(.watch(15, .semibold))
                         .foregroundStyle(WatchPalette.ink)
-                        .lineLimit(2)
+                        .lineLimit(3)
                         .multilineTextAlignment(.leading)
                     Text(brief)
                         .font(.watch(13))
@@ -249,7 +249,7 @@ private struct WalkRow: View {
                     Text(row.exercise)
                         .font(.watch(15, .semibold))
                         .foregroundStyle(WatchPalette.ink)
-                        .lineLimit(2)
+                        .lineLimit(3)
                         .multilineTextAlignment(.leading)
                     Text(row.hasData ? row.summary : row.plan)
                         .font(.watch(13))
@@ -274,9 +274,9 @@ private struct WorkoutArea: View {
             Button {
                 model.path = [.workout]
             } label: {
-                HStack(spacing: 8) {
+                HStack(spacing: 6) {
                     Image(systemName: WorkoutLook.icon(workout.kind))
-                        .font(.system(size: 18, weight: .semibold))
+                        .font(.system(size: 16, weight: .semibold))
                         .foregroundStyle(WatchPalette.ok)
                     VStack(alignment: .leading, spacing: 1) {
                         Text(workout.kind.title)
@@ -287,7 +287,9 @@ private struct WorkoutArea: View {
                             .monospacedDigit()
                             .foregroundStyle(WatchPalette.ink)
                     }
-                    Spacer(minLength: 0)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     if let heart = model.metrics.heartRate {
                         HStack(spacing: 3) {
                             Image(systemName: "heart.fill")
@@ -298,6 +300,8 @@ private struct WorkoutArea: View {
                                 .monospacedDigit()
                                 .foregroundStyle(WatchPalette.ink)
                         }
+                        .lineLimit(1)
+                        .fixedSize()
                         .accessibilityElement(children: .ignore)
                         .accessibilityLabel("Пульс \(Numbers.format(heart, digits: 0))")
                     }
@@ -320,7 +324,8 @@ private struct WorkoutArea: View {
                         systemImage: WorkoutLook.icon(kind)
                     )
                 }
-                .buttonStyle(.watch(.soft))
+                // на маленьком экране подписи обеих кнопок одного размера
+                .buttonStyle(.watch(.soft, size: WatchMetrics.compact ? 14 : 16))
                 .disabled(model.workoutStarting != nil)
             }
         }

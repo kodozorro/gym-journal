@@ -108,7 +108,7 @@ struct WalkSegmentSheet: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 6) {
+            VStack(spacing: 4) {
                 Text(prompt.note)
                     .font(.watch(12))
                     .foregroundStyle(WatchPalette.ink2)
@@ -165,7 +165,7 @@ struct WalkSegmentSheet: View {
                 .font(.watch(12))
                 .foregroundStyle(WatchPalette.ink3)
         }
-        .frame(maxWidth: .infinity, minHeight: 54)
+        .frame(maxWidth: .infinity, minHeight: 48)
         .background(
             active ? WatchPalette.accentSoft : WatchPalette.surface,
             in: RoundedRectangle(cornerRadius: 12)

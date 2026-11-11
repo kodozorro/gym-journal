@@ -1,4 +1,5 @@
 import SwiftUI
+import WatchKit
 
 // Оформление приложения на часах. Экран часов всегда тёмный, поэтому цвета взяты из тёмной темы
 // веб-приложения (css/app.css). Фон страницы на часах чёрный: так экран сливается с корпусом.
@@ -51,6 +52,8 @@ enum WatchMetrics {
     static let radius: CGFloat = 14
     /// Высота главной кнопки: под палец, но не больше, чем нужно маленькому экрану.
     static let button: CGFloat = 42
+    /// Маленький экран: часы 40 и 41 мм. На нём числа и подписи чуть мельче.
+    static let compact = WKInterfaceDevice.current().screenBounds.height < 220
 }
 
 // MARK: Кнопки
@@ -66,9 +69,11 @@ struct WatchButtonStyle: ButtonStyle {
 
     var kind: Kind = .plain
     var height: CGFloat = WatchMetrics.button
+    /// Размер шрифта подписи.
+    var size: CGFloat = 16
 
     func makeBody(configuration: Configuration) -> some View {
-        WatchButtonBody(configuration: configuration, kind: kind, height: height)
+        WatchButtonBody(configuration: configuration, kind: kind, height: height, size: size)
     }
 }
 
@@ -76,6 +81,7 @@ private struct WatchButtonBody: View {
     let configuration: ButtonStyleConfiguration
     let kind: WatchButtonStyle.Kind
     let height: CGFloat
+    let size: CGFloat
     @Environment(\.isEnabled) private var enabled
 
     private var fill: Color {
@@ -98,7 +104,7 @@ private struct WatchButtonBody: View {
 
     var body: some View {
         configuration.label
-            .font(.watch(16, .semibold))
+            .font(.watch(size, .semibold))
             .lineLimit(1)
             .minimumScaleFactor(0.75)
             .foregroundStyle(ink)
@@ -112,8 +118,10 @@ private struct WatchButtonBody: View {
 }
 
 extension ButtonStyle where Self == WatchButtonStyle {
-    static func watch(_ kind: WatchButtonStyle.Kind = .plain, height: CGFloat = WatchMetrics.button) -> WatchButtonStyle {
-        WatchButtonStyle(kind: kind, height: height)
+    static func watch(
+        _ kind: WatchButtonStyle.Kind = .plain, height: CGFloat = WatchMetrics.button, size: CGFloat = 16
+    ) -> WatchButtonStyle {
+        WatchButtonStyle(kind: kind, height: height, size: size)
     }
 }
 

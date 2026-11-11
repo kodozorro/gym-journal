@@ -17,6 +17,12 @@ struct ExerciseScreen: View {
     @State private var picked: Int?
     @FocusState private var crown: Bool
 
+    /// Высота содержимого: название в две строки, вес, подходы и кнопка. На часах поменьше оно
+    /// на несколько пунктов заходит за поля экрана сверху и снизу, до скруглённых углов не доходит.
+    static let height: CGFloat = 147
+    static let buttonHeight: CGFloat = 38
+    static let weightHeight: CGFloat = 32
+
     var body: some View {
         if let row = model.row(key), !row.isWalk {
             content(row)
@@ -58,25 +64,29 @@ struct ExerciseScreen: View {
     private func content(_ row: JournalRow) -> some View {
         let index = activeIndex(row)
         let busy = model.activeRest != nil
-        return VStack(spacing: 5) {
+        return VStack(spacing: 0) {
+            // название в две строки показано целиком: под него сжимаются ячейки подходов
             Text(row.exercise)
                 .font(.watch(15, .semibold))
                 .foregroundStyle(WatchPalette.ink)
                 .lineLimit(2)
                 .minimumScaleFactor(0.8)
                 .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity)
             WeightRow(row: row)
+                .padding(.top, 3)
             SetCells(row: row, active: index, reps: reps) { tapped in
                 picked = tapped == row.nextSetIndex ? nil : tapped
                 crown = true
             }
+            .padding(.top, 3)
             // главная кнопка всегда у нижнего края: палец находит её не глядя
-            Spacer(minLength: 0)
+            Spacer(minLength: 3)
             action(row, index)
         }
         .padding(.horizontal, 4)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .frame(maxWidth: .infinity, minHeight: ExerciseScreen.height, maxHeight: .infinity, alignment: .top)
         .focusable(index != nil && !busy)
         .focused($crown)
         .digitalCrownRotation(
@@ -107,13 +117,13 @@ struct ExerciseScreen: View {
                 picked = nil
                 model.recordSet(key, index, value)
             }
-            .buttonStyle(.watch(.primary))
+            .buttonStyle(.watch(.primary, height: ExerciseScreen.buttonHeight))
         } else {
             let next = model.nextExercise(after: key)
             Button(next == nil ? "К списку" : "Дальше") {
                 model.open(next)
             }
-            .buttonStyle(.watch(.soft))
+            .buttonStyle(.watch(.soft, height: ExerciseScreen.buttonHeight))
         }
     }
 }
@@ -133,7 +143,7 @@ private struct WeightRow: View {
             } label: {
                 Image(systemName: "minus")
             }
-            .buttonStyle(WatchRoundStyle())
+            .buttonStyle(WatchRoundStyle(size: ExerciseScreen.weightHeight))
             .accessibilityLabel("Убавить вес")
 
             Button {
@@ -151,7 +161,7 @@ private struct WeightRow: View {
                 }
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
-                .frame(maxWidth: .infinity, minHeight: 36)
+                .frame(maxWidth: .infinity, minHeight: ExerciseScreen.weightHeight)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -162,7 +172,7 @@ private struct WeightRow: View {
             } label: {
                 Image(systemName: "plus")
             }
-            .buttonStyle(WatchRoundStyle())
+            .buttonStyle(WatchRoundStyle(size: ExerciseScreen.weightHeight))
             .accessibilityLabel("Прибавить вес")
         }
     }
@@ -211,8 +221,8 @@ private struct SetCells: View {
             .lineLimit(1)
             .minimumScaleFactor(0.6)
             .foregroundStyle(ink)
-            // на маленьких часах ячейки ниже: так на экран помещается название в две строки
-            .frame(maxWidth: .infinity, minHeight: 34, maxHeight: 50)
+            // под названием в две строки ячейки ниже
+            .frame(maxWidth: .infinity, minHeight: 32, maxHeight: 50)
             .background(
                 isActive ? WatchPalette.accentSoft : (done != nil ? WatchPalette.okSoft : WatchPalette.surface),
                 in: RoundedRectangle(cornerRadius: 12)

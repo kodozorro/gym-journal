@@ -1,5 +1,24 @@
 import SwiftUI
+import WatchKit
 import GymJournalCore
+
+/// Размеры экрана тренировки. На часах поменьше время и числа мельче: кнопка «Завершить» видна
+/// сразу и не заходит в скруглённый угол экрана.
+private struct WorkoutLayout {
+    var timer: CGFloat
+    var value: CGFloat
+    var spacing: CGFloat
+    /// Отступ над кнопкой и под ней.
+    var above: CGFloat
+    var below: CGFloat
+
+    static let current: WorkoutLayout = {
+        let height = WKInterfaceDevice.current().screenBounds.height
+        if height < 220 { return WorkoutLayout(timer: 30, value: 20, spacing: 3, above: 2, below: 2) }
+        if height < 230 { return WorkoutLayout(timer: 32, value: 22, spacing: 4, above: 2, below: 8) }
+        return WorkoutLayout(timer: 36, value: 24, spacing: 6, above: 4, below: 8)
+    }()
+}
 
 /// Идущая тренировка: время, пульс, калории, у ходьбы — расстояние, и кнопка «Завершить».
 struct WorkoutScreen: View {
@@ -11,7 +30,7 @@ struct WorkoutScreen: View {
             if let workout = model.workout {
                 content(workout)
                     .padding(.horizontal, 4)
-                    .padding(.bottom, 8)
+                    .padding(.bottom, WorkoutLayout.current.below)
             } else {
                 MessageView(icon: "checkmark.circle", title: "Тренировка завершена", text: "")
             }
@@ -30,9 +49,10 @@ struct WorkoutScreen: View {
 
     private func content(_ workout: LiveWorkout) -> some View {
         let metrics = model.metrics
-        return VStack(alignment: .leading, spacing: 6) {
+        let layout = WorkoutLayout.current
+        return VStack(alignment: .leading, spacing: layout.spacing) {
             Text(workout.startedAt, style: .timer)
-                .font(.watch(36, .bold, rounded: true))
+                .font(.watch(layout.timer, .bold, rounded: true))
                 .monospacedDigit()
                 .foregroundStyle(WatchPalette.ink)
                 .lineLimit(1)
@@ -57,7 +77,7 @@ struct WorkoutScreen: View {
             }
             .buttonStyle(.watch(.danger))
             .disabled(model.workoutEnding)
-            .padding(.top, 4)
+            .padding(.top, layout.above)
         }
     }
 
@@ -70,7 +90,7 @@ struct WorkoutScreen: View {
                 .foregroundStyle(tint)
                 .frame(width: 22)
             Text(value ?? "—")
-                .font(.watch(24, .bold, rounded: true))
+                .font(.watch(WorkoutLayout.current.value, .bold, rounded: true))
                 .monospacedDigit()
                 .foregroundStyle(WatchPalette.ink)
             Text(unit)
