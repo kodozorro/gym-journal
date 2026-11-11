@@ -8,7 +8,8 @@ import path from 'node:path';
 import { ROOT } from './helpers.mjs';
 import { appFiles, stale } from '../tools/stamp.mjs';
 
-const SKIP_DIRS = new Set(['.git', 'node_modules', '.tmp', 'out']);
+// .build, .swiftpm, DerivedData и xcuserdata — то, что оставляют сборки приложения на Swift
+const SKIP_DIRS = new Set(['.git', 'node_modules', '.tmp', 'out', '.build', '.swiftpm', 'DerivedData', 'xcuserdata']);
 const BINARY = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.ico', '.woff', '.woff2', '.pdf']);
 
 function walk(dir = '') {

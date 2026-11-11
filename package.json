@@ -8,6 +8,7 @@
     "dev": "node tools/dev-server.mjs --mock",
     "stamp": "node tools/stamp.mjs",
     "icons": "node tools/make-icons.mjs",
+    "ios:data": "node ios/tools/generate.mjs",
     "test": "node --test tests/*.test.mjs",
     "test:e2e": "node --test tests/e2e/*.test.mjs",
     "check": "node tools/stamp.mjs --check && node --test tests/*.test.mjs && node --test tests/e2e/*.test.mjs"

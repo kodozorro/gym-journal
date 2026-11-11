@@ -7,3 +7,12 @@ node_modules/
 
 # снимки экранов, которые делает tests/e2e/screenshots.mjs
 /screenshots/
+
+# приложение на Swift: проект Xcode делает XcodeGen из ios/project.yml, команда подписи — у каждого своя
+/ios/*.xcodeproj/
+/ios/Config/Local.xcconfig
+.build/
+.swiftpm/
+DerivedData/
+xcuserdata/
+*.xcresult
