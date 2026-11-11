@@ -443,6 +443,16 @@ private struct HealthSection: View {
                         : "Тренировку начинают кнопкой на экране дня. Без часов телефон записывает только её вид и время.")
                 }
             }
+            if model.watchInstalled {
+                SettingRow(
+                    "Вибрация на часах в конце отдыха",
+                    hint: "Звук к ней добавляют сами часы, когда на них выключен бесшумный режим."
+                ) {
+                    SwitchView(label: "Вибрация на часах в конце отдыха", isOn: model.settings.watchSignal) { next in
+                        model.update { $0.watchSignal = next }
+                    }
+                }
+            }
         }
     }
 }

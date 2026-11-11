@@ -254,6 +254,8 @@ extension AppModel {
 
     /// Посылка от часов: действия применяются по одному разу, сколько бы раз они ни пришли.
     func receive(_ packet: WatchPacket) {
+        // часы могли разбудить свёрнутое приложение уже на следующий день
+        refreshToday()
         let accepted = WatchLink.accept(packet, epoch: watchMemory.epoch, seq: watchMemory.seq)
         watchMemory.epoch = packet.epoch
         watchMemory.seq = accepted.seq

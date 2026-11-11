@@ -1,3 +1,4 @@
+import AudioToolbox
 import AVFoundation
 import UIKit
 
@@ -6,7 +7,21 @@ import UIKit
 /// Звук идёт как обычный звук приложения: в беззвучном режиме телефона его не слышно, музыку он
 /// не прерывает. Конец отдыха всегда виден на экране: звук и вибрация — дополнение.
 final class Feedback {
+    /// Файлы для уведомления о конце отдыха: те же три сигнала и тишина, с которой телефон
+    /// только вибрирует.
+    static let soundFile = "rest-end.wav"
+    static let silentFile = "rest-silent.wav"
+
     private var player: AVAudioPlayer?
+
+    /// Кладёт звуки туда, где их найдёт уведомление: в папку Library/Sounds приложения.
+    static func installSounds() {
+        guard let library = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask).first else { return }
+        let folder = library.appendingPathComponent("Sounds", isDirectory: true)
+        try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        try? tone.write(to: folder.appendingPathComponent(soundFile), options: [.atomic])
+        try? silence.write(to: folder.appendingPathComponent(silentFile), options: [.atomic])
+    }
 
     /// Готовит звук заранее, чтобы сигнал не опоздал.
     func prime() {
@@ -25,10 +40,9 @@ final class Feedback {
         player?.play()
     }
 
+    /// Вибрация конца отдыха: обычная, длинная. Её слышно и когда телефон лежит рядом.
     func vibrate() {
-        let generator = UINotificationFeedbackGenerator()
-        generator.prepare()
-        generator.notificationOccurred(.success)
+        AudioServicesPlaySystemSound(kSystemSoundID_Vibrate)
     }
 
     /// Просит телефон не гасить экран или отпускает его.
@@ -63,6 +77,9 @@ final class Feedback {
         }
         return Feedback.wave(samples, rate: 44_100)
     }()
+
+    /// Треть секунды тишины.
+    private static let silence = Feedback.wave([Int16](repeating: 0, count: 14_700), rate: 44_100)
 
     /// Файл WAV в памяти: один канал, 16 бит.
     private static func wave(_ samples: [Int16], rate: UInt32) -> Data {

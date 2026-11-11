@@ -132,6 +132,8 @@ public struct WatchState: Equatable, Codable, Sendable {
     public var intent: WorkoutIntent?
     /// Записывать тренировки в «Здоровье».
     public var health: Bool
+    /// Вибрировать в конце отдыха.
+    public var signal: Bool
     /// Установка часов, к которой относится ackSeq.
     public var ackEpoch: String
     /// Номер последнего действия часов, которое телефон принял.
@@ -143,7 +145,8 @@ public struct WatchState: Equatable, Codable, Sendable {
         stamp: Int64 = 0, configured: Bool = false, today: String = "", date: String? = nil, title: String = "",
         week: Int? = nil, rows: [JournalRow] = [], last: [String: JournalRow] = [:], steps: [String: Double] = [:],
         restSec: Int = 90, autoTimer: Bool = true, rest: RestTimer? = nil, workout: LiveWorkout? = nil,
-        intent: WorkoutIntent? = nil, health: Bool = true, ackEpoch: String = "", ackSeq: Int = 0, next: String = ""
+        intent: WorkoutIntent? = nil, health: Bool = true, signal: Bool = true, ackEpoch: String = "",
+        ackSeq: Int = 0, next: String = ""
     ) {
         self.stamp = stamp
         self.configured = configured
@@ -160,6 +163,7 @@ public struct WatchState: Equatable, Codable, Sendable {
         self.workout = workout
         self.intent = intent
         self.health = health
+        self.signal = signal
         self.ackEpoch = ackEpoch
         self.ackSeq = ackSeq
         self.next = next
@@ -242,7 +246,7 @@ public enum WatchLink {
     ) -> WatchState {
         var state = WatchState(
             configured: configured, today: today, restSec: settings.restSec, autoTimer: settings.autoTimer,
-            health: settings.health
+            health: settings.health, signal: settings.watchSignal
         )
         let days = Journal.groupDays(journal)
         let shown = days.first { $0.date == live } ?? days.first { $0.date == today }

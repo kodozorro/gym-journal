@@ -17,6 +17,7 @@ final class WatchLinkTests: XCTestCase {
         var settings = AppSettings()
         settings.restSec = 120
         settings.autoTimer = false
+        settings.watchSignal = false
         settings.setStep(1.25, for: "Гакк-жим")
         let state = dayState(settings: settings)
 
@@ -29,6 +30,8 @@ final class WatchLinkTests: XCTestCase {
         XCTAssertEqual(state.restSec, 120)
         XCTAssertFalse(state.autoTimer)
         XCTAssertTrue(state.health)
+        XCTAssertFalse(state.signal)
+        XCTAssertTrue(dayState().signal)
         XCTAssertEqual(state.next, "")
 
         // «прошлый раз» и шаг веса — только у силовых строк
@@ -361,6 +364,7 @@ final class SettingsTests: XCTestCase {
         XCTAssertEqual(settings.theme, .auto)
         XCTAssertEqual(settings.defaultStep, 2.5)
         XCTAssertTrue(settings.health)
+        XCTAssertTrue(settings.watchSignal)
         XCTAssertEqual(settings.step(for: "Гакк-жим"), 2.5)
         XCTAssertEqual(try decode("{}"), settings)
     }
@@ -407,6 +411,7 @@ final class SettingsTests: XCTestCase {
         settings.setStep(5, for: "Жим ногами")
         settings.weightNoteSeen = true
         settings.health = false
+        settings.watchSignal = false
         let data = try JSONEncoder().encode(settings)
         XCTAssertEqual(try JSONDecoder().decode(AppSettings.self, from: data), settings)
     }

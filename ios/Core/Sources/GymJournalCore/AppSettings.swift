@@ -41,6 +41,8 @@ public struct AppSettings: Equatable, Sendable {
     public var chartExercise = ""
     /// Записывать тренировку в «Здоровье» и включать её на часах.
     public var health = true
+    /// Часы вибрируют в конце отдыха.
+    public var watchSignal = true
 
     public init() {}
 
@@ -74,7 +76,7 @@ public struct AppSettings: Equatable, Sendable {
 
 extension AppSettings: Codable {
     enum CodingKeys: String, CodingKey {
-        case restSec, autoTimer, sound, vibrate, wakeLock, hints, theme, defaultStep, steps, weightNoteSeen, chartExercise, health
+        case restSec, autoTimer, sound, vibrate, wakeLock, hints, theme, defaultStep, steps, weightNoteSeen, chartExercise, health, watchSignal
     }
 
     /// Незнакомые и испорченные поля заменяются значениями по умолчанию.
@@ -93,6 +95,7 @@ extension AppSettings: Codable {
         if let value = try? container.decode(Bool.self, forKey: .weightNoteSeen) { out.weightNoteSeen = value }
         if let value = try? container.decode(String.self, forKey: .chartExercise) { out.chartExercise = value }
         if let value = try? container.decode(Bool.self, forKey: .health) { out.health = value }
+        if let value = try? container.decode(Bool.self, forKey: .watchSignal) { out.watchSignal = value }
         self = out.normalized()
     }
 
@@ -110,5 +113,6 @@ extension AppSettings: Codable {
         try container.encode(weightNoteSeen, forKey: .weightNoteSeen)
         try container.encode(chartExercise, forKey: .chartExercise)
         try container.encode(health, forKey: .health)
+        try container.encode(watchSignal, forKey: .watchSignal)
     }
 }

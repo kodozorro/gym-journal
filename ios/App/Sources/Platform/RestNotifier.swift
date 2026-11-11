@@ -15,7 +15,10 @@ final class RestNotifier: NSObject, UNUserNotificationCenterDelegate {
     }
 
     /// Ставит уведомление на момент конца отдыха. Разрешение спрашивается при первом отдыхе.
-    func schedule(at date: Date, sound: Bool) {
+    /// - Parameters:
+    ///   - sound: уведомление приходит с теми же тремя сигналами, что звучат в приложении.
+    ///   - vibrate: без звука телефон только вибрирует: вместо сигналов в уведомлении тишина.
+    func schedule(at date: Date, sound: Bool, vibrate: Bool) {
         cancel()
         guard date.timeIntervalSinceNow > 1 else { return }
         let mine = generation
@@ -28,7 +31,11 @@ final class RestNotifier: NSObject, UNUserNotificationCenterDelegate {
                 let content = UNMutableNotificationContent()
                 content.title = "Отдых окончен"
                 content.body = "Пора делать следующий подход."
-                if sound { content.sound = .default }
+                if sound {
+                    content.sound = UNNotificationSound(named: UNNotificationSoundName(Feedback.soundFile))
+                } else if vibrate {
+                    content.sound = UNNotificationSound(named: UNNotificationSoundName(Feedback.silentFile))
+                }
                 let trigger = UNTimeIntervalNotificationTrigger(timeInterval: delay, repeats: false)
                 let request = UNNotificationRequest(identifier: RestNotifier.identifier, content: content, trigger: trigger)
                 self.center.add(request)

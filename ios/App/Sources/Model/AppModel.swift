@@ -153,7 +153,10 @@ final class AppModel: ObservableObject {
         guard !started else { return }
         started = true
         monitor.onChange = { [weak self] in self?.networkChanged() }
-        if demo == nil { monitor.start() }
+        if demo == nil {
+            monitor.start()
+            Feedback.installSounds()
+        }
         watch?.onPacket = { [weak self] packet in self?.receive(packet) }
         watch?.onStatus = { [weak self] in self?.watchStatusChanged() }
         watch?.activate()
@@ -246,7 +249,7 @@ final class AppModel: ObservableObject {
         updateWakeLock()
     }
 
-    private func refreshToday() {
+    func refreshToday() {
         let next = demo?.today ?? Days.today(now())
         guard next != today else { return }
         today = next
@@ -670,7 +673,7 @@ final class AppModel: ObservableObject {
         }
         runTicker()
         if mine, let timer {
-            notifier?.schedule(at: timer.endsAt, sound: settings.sound)
+            notifier?.schedule(at: timer.endsAt, sound: settings.sound, vibrate: settings.vibrate)
         } else {
             notifier?.cancel()
         }
