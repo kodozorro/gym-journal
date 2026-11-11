@@ -276,7 +276,7 @@ private struct ConnectionSection: View {
             input("Адрес веб-приложения") {
                 TextField(
                     "Адрес веб-приложения", text: url,
-                    prompt: Text("https://script.google.com/\nmacros/s/…/exec"), axis: .vertical
+                    prompt: Text(verbatim: "https://script.google.com/\nmacros/s/…/exec"), axis: .vertical
                 )
                 .lineLimit(3, reservesSpace: true)
                 .keyboardType(.URL)

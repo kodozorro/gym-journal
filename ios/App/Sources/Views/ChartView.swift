@@ -161,8 +161,7 @@ struct ChartView: View {
         .padding(.horizontal, 10)
         .background(Palette.ink, in: RoundedRectangle(cornerRadius: 10))
         // подсказка стоит над точкой и по её центру
-        .alignmentGuide(.leading) { $0.width / 2 }
-        .alignmentGuide(.top) { $0.height }
+        .frame(width: 0, height: 0, alignment: .bottom)
         .offset(x: x, y: y)
         .allowsHitTesting(false)
     }
