@@ -19,6 +19,13 @@ struct WatchDemo {
         return WatchDemo(today: today, scene: defaults.string(forKey: "demoScene") ?? "today")
     }
 
+    /// День, который часы считают сегодняшним, когда телефон показывает учебный журнал:
+    /// `-demoToday 2026-11-25` без `-demo YES`. Нужен, чтобы проверить обмен на паре симуляторов.
+    static func fixedToday(_ defaults: UserDefaults = .standard) -> String? {
+        guard let value = defaults.string(forKey: "demoToday"), Days.isISODate(value) else { return nil }
+        return value
+    }
+
     /// Состояние дня, каким его прислал бы телефон с учебным журналом.
     func state() -> WatchState {
         // часы, которые ещё ничего не получали от телефона

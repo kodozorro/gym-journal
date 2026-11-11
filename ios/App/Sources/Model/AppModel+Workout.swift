@@ -91,7 +91,7 @@ extension AppModel {
     /// Кнопка «Завершить»: сначала вопрос, чтобы тренировка не оборвалась от случайного касания.
     func askStopWorkout() {
         guard let current = workout else { return }
-        if demo != nil {
+        if demo != nil, health == nil {
             workout = nil
             return
         }

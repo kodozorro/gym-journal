@@ -104,8 +104,8 @@ final class AppModel: ObservableObject {
                 transport = URLSessionTransport()
             }
             notifier = nil
-            health = nil
-            watch = nil
+            health = demo.devices && HealthStore.isAvailable ? HealthStore() : nil
+            watch = demo.devices ? PhoneWatchLink() : nil
         } else {
             let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
                 ?? FileManager.default.temporaryDirectory
@@ -161,7 +161,8 @@ final class AppModel: ObservableObject {
         watch?.onStatus = { [weak self] in self?.watchStatusChanged() }
         watch?.activate()
         healthAccess = currentHealthAccess()
-        if demo != nil { watchInstalled = true }
+        // в показе с учебными данными часов нет, но выглядит всё как с ними
+        if demo != nil, watch == nil { watchInstalled = true }
         runTicker()
         dayTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.refreshToday() }

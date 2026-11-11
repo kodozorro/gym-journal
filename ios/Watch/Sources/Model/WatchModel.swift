@@ -66,6 +66,8 @@ final class WatchModel: ObservableObject {
     let feedback: WatchFeedback?
     /// Показ с учебными данными: без телефона и «Здоровья».
     let demo: WatchDemo?
+    /// «Сегодня», заданное при запуске: телефон на симуляторе показывает учебный журнал.
+    private let fixedToday: String?
 
     // MARK: Состояние
 
@@ -117,6 +119,7 @@ final class WatchModel: ObservableObject {
             feedback = nil
             state = demo.state()
             ops = []
+            fixedToday = demo.today
             today = demo.today
             saved = WatchSaved()
         } else {
@@ -129,7 +132,9 @@ final class WatchModel: ObservableObject {
             feedback = WatchFeedback()
             state = files.load(WatchState.self, for: "state") ?? WatchState()
             ops = files.load([WatchOp].self, for: "ops") ?? []
-            today = Days.today()
+            let fixed = WatchDemo.fixedToday()
+            fixedToday = fixed
+            today = fixed ?? Days.today()
             saved = files.load(WatchSaved.self, for: "memory") ?? WatchSaved()
             workout = files.load(LiveWorkout.self, for: "workout")
         }
@@ -163,7 +168,7 @@ final class WatchModel: ObservableObject {
     }
 
     private func refreshToday() {
-        guard demo == nil else { return }
+        guard fixedToday == nil else { return }
         let day = Days.today()
         if day != today { today = day }
     }
