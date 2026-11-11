@@ -1,4 +1,5 @@
-# Проект Xcode для приложения на Swift. Сам проект в репозитории не лежит: его делает XcodeGen.
+# Проект Xcode для приложений на Swift: iPhone и Apple Watch. Сам проект в репозитории не лежит:
+# его делает XcodeGen.
 #
 #   cd ios && xcodegen generate && open GymJournal.xcodeproj
 #
@@ -49,6 +50,27 @@ targets:
         CODE_SIGN_ENTITLEMENTS: App/GymJournal.entitlements
         TARGETED_DEVICE_FAMILY: "1"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    dependencies:
+      - package: GymJournalCore
+      # приложение для часов едет внутри приложения для iPhone и ставится на часы вместе с ним
+      - target: GymJournalWatch
+    scheme: {}
+
+  GymJournalWatch:
+    type: application
+    platform: watchOS
+    sources:
+      - path: Watch/Sources
+      - path: Watch/Resources
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: $(APP_BUNDLE_ID).watchkitapp
+        PRODUCT_NAME: GymJournalWatch
+        INFOPLIST_FILE: Watch/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Watch/GymJournalWatch.entitlements
+        TARGETED_DEVICE_FAMILY: "4"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        SKIP_INSTALL: YES
     dependencies:
       - package: GymJournalCore
     scheme: {}

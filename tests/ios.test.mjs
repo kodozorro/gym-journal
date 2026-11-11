@@ -132,6 +132,45 @@ test('цвета приложения на Swift те же, что в css/app.cs
   }
 });
 
+test('цвета приложения для часов взяты из тёмной темы css/app.css', () => {
+  const css = read('css/app.css');
+  const from = css.indexOf(":root[data-theme='dark'] {");
+  const dark = Object.fromEntries(
+    [...css.slice(from, css.indexOf('}', from)).matchAll(/--([a-z0-9-]+):\s*#([0-9a-f]{6});/g)].map((m) => [m[1], m[2]]),
+  );
+  const swift = read('ios/Watch/Sources/Theme/WatchTheme.swift');
+  const roles = [...swift.matchAll(/static let (\w+) = Color\(hex: 0x([0-9A-Fa-f]{6})\)/g)];
+  assert.ok(roles.length >= 15, 'в WatchTheme.swift должны быть цвета по ролям');
+  for (const [, name, hex] of roles) {
+    const role = name.replace(/([A-Z0-9])/g, '-$1').toLowerCase();
+    assert.equal(hex.toLowerCase(), dark[role], `часы, ${role}`);
+  }
+});
+
+test('приложение для часов едет внутри приложения для iPhone и умеет вести тренировку', () => {
+  const plist = read('ios/Watch/Info.plist');
+  const phone = read('ios/App/Info.plist');
+  const text = (source, key) => new RegExp(`<key>${key}</key>\\s*<string>([^<]*)</string>`).exec(source)?.[1];
+  // часы спрашивают доступ к «Здоровью» теми же словами, что и телефон
+  for (const key of ['NSHealthShareUsageDescription', 'NSHealthUpdateUsageDescription', 'CFBundleDisplayName']) {
+    assert.ok(text(plist, key)?.length > 3, key);
+    assert.equal(text(plist, key), text(phone, key), key);
+  }
+  assert.match(plist, /<key>WKApplication<\/key>\s*<true\/>/);
+  assert.equal(text(plist, 'WKCompanionAppBundleIdentifier'), '$(APP_BUNDLE_ID)');
+  // без этого режима приложение на часах засыпает с опущенной рукой и теряет тренировку
+  assert.match(plist, /<key>WKBackgroundModes<\/key>\s*<array>\s*<string>workout-processing<\/string>/);
+  assert.match(read('ios/Watch/GymJournalWatch.entitlements'), /<key>com\.apple\.developer\.healthkit<\/key>\s*<true\/>/);
+
+  const project = read('ios/project.yml');
+  for (const file of ['Watch/Info.plist', 'Watch/GymJournalWatch.entitlements', 'Watch/Sources', 'Watch/Resources']) {
+    assert.ok(project.includes(file), `project.yml не упоминает ${file}`);
+    assert.ok(fs.existsSync(path.join(ROOT, 'ios', file)), `нет ios/${file}`);
+  }
+  assert.match(project, /PRODUCT_BUNDLE_IDENTIFIER: \$\(APP_BUNDLE_ID\)\.watchkitapp/);
+  assert.match(project, /- target: GymJournalWatch/, 'приложение для iPhone должно включать в себя приложение для часов');
+});
+
 test('у приложения для iPhone есть значок, права на «Здоровье» и пояснения к ним', () => {
   const plist = read('ios/App/Info.plist');
   for (const key of ['NSHealthShareUsageDescription', 'NSHealthUpdateUsageDescription', 'CFBundleDisplayName']) {
