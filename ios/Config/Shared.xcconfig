@@ -1,0 +1,9 @@
+// Общие настройки сборки приложения на Swift.
+//
+// Команду разработчика (DEVELOPMENT_TEAM) каждый задаёт у себя в Local.xcconfig: файл в
+// репозиторий не попадает. Для сборки в симуляторе он не нужен.
+
+// Идентификатор приложения для iPhone. У приложения для часов он тот же с окончанием .watchkitapp.
+APP_BUNDLE_ID = io.github.kodozorro.gymjournal
+
+#include? "Local.xcconfig"

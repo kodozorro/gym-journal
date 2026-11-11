@@ -11,6 +11,7 @@ import { ROOT } from './helpers.mjs';
 import { outputs, stale } from '../ios/tools/generate.mjs';
 import { circlePath, rectPath, simplify, tokenize, toPathData } from '../ios/tools/svgpath.mjs';
 import { iconNames } from '../ios/tools/art.mjs';
+import { iconSvg } from '../ios/tools/icon.mjs';
 import { ART_NAMES } from '../js/ui/art.js';
 import { guideArt, guidePhotos } from '../js/core/guide.js';
 
@@ -73,6 +74,102 @@ test('в приложение на Swift попали все значки', () =
     assert.ok(shapes.length > 0, `значок ${name} пуст`);
     for (const shape of shapes) assert.match(shape.o, /^M[MLCQZ]*$/, `значок ${name}`);
   }
+});
+
+test('роли фигур в рисунках известны приложению на Swift', () => {
+  const art = json('ios/App/Resources/art.json');
+  const used = new Set();
+  const collect = (node) => {
+    node.c.forEach((role) => used.add(role));
+    (node.ch || []).forEach(collect);
+  };
+  Object.values(art.items).flat().forEach(collect);
+
+  const source = read('ios/App/Sources/Views/ArtView.swift');
+  const known = new Set([...source.matchAll(/case "([a-z-]+)"/g)].map((m) => m[1]));
+  const unknown = [...used].filter((role) => !known.has(role)).sort();
+  assert.deepEqual(unknown, [], 'добавьте роль в ArtView.swift: иначе фигура не нарисуется');
+  // и в стилях веб-приложения роль описана: цвета Swift повторяют css/app.css
+  const css = read('css/app.css');
+  for (const role of used) assert.ok(css.includes(`.art__${role}`), `в css/app.css нет класса art__${role}`);
+});
+
+test('значки, которые называет код на Swift, есть в данных', () => {
+  const icons = json('ios/App/Resources/icons.json');
+  const missing = [];
+  const walk = (dir) => {
+    for (const entry of fs.readdirSync(path.join(ROOT, dir), { withFileTypes: true })) {
+      const rel = `${dir}/${entry.name}`;
+      if (entry.isDirectory()) walk(rel);
+      else if (rel.endsWith('.swift')) {
+        for (const m of read(rel).matchAll(/\bIcon\("([A-Za-z]+)"/g)) {
+          if (!icons.items[m[1]]) missing.push(`${rel}: ${m[1]}`);
+        }
+      }
+    }
+  };
+  walk('ios/App/Sources');
+  walk('ios/Core/Sources');
+  assert.deepEqual(missing, []);
+});
+
+test('цвета приложения на Swift те же, что в css/app.css, в обеих темах', () => {
+  const css = read('css/app.css');
+  const block = (from, to) => css.slice(css.indexOf(from), css.indexOf(to, css.indexOf(from)));
+  const colors = (text) => Object.fromEntries([...text.matchAll(/--([a-z0-9-]+):\s*#([0-9a-f]{6});/g)].map((m) => [m[1], m[2]]));
+  const light = colors(block(':root {', '}'));
+  const dark = colors(block(":root[data-theme='dark'] {", '}'));
+  assert.ok(Object.keys(light).length >= 20);
+
+  const swift = read('ios/App/Sources/Theme/Theme.swift');
+  const roles = [...swift.matchAll(/static let (\w+) = dynamic\(0x([0-9A-Fa-f]{6}), 0x([0-9A-Fa-f]{6})\)/g)];
+  assert.equal(roles.length, Object.keys(light).length, 'в Theme.swift должны быть все цвета из :root');
+  for (const [, name, lightHex, darkHex] of roles) {
+    // surface2 → surface-2, okSoftInk → ok-soft-ink
+    const role = name.replace(/([A-Z0-9])/g, '-$1').toLowerCase();
+    assert.equal(lightHex.toLowerCase(), light[role], `светлая тема, ${role}`);
+    assert.equal(darkHex.toLowerCase(), dark[role], `тёмная тема, ${role}`);
+  }
+});
+
+test('у приложения для iPhone есть значок, права на «Здоровье» и пояснения к ним', () => {
+  const plist = read('ios/App/Info.plist');
+  for (const key of ['NSHealthShareUsageDescription', 'NSHealthUpdateUsageDescription', 'CFBundleDisplayName']) {
+    assert.match(plist, new RegExp(`<key>${key}</key>\\s*<string>[^<]{3,}</string>`), key);
+  }
+  assert.match(read('ios/App/GymJournal.entitlements'), /<key>com\.apple\.developer\.healthkit<\/key>\s*<true\/>/);
+
+  const project = read('ios/project.yml');
+  for (const file of ['App/Info.plist', 'App/GymJournal.entitlements', 'Config/Shared.xcconfig']) {
+    assert.ok(project.includes(file), `project.yml не упоминает ${file}`);
+    assert.ok(fs.existsSync(path.join(ROOT, 'ios', file)), `нет файла ios/${file}`);
+  }
+  // команда разработчика у каждого своя: в общих настройках её нет
+  assert.doesNotMatch(read('ios/Config/Shared.xcconfig'), /^\s*DEVELOPMENT_TEAM/m);
+  assert.doesNotMatch(project, /DEVELOPMENT_TEAM/);
+
+  for (const dir of ['ios/App/Resources', 'ios/Watch/Resources']) {
+    const set = `${dir}/Assets.xcassets/AppIcon.appiconset`;
+    const { images } = json(`${set}/Contents.json`);
+    assert.equal(images.length, 1);
+    assert.equal(images[0].size, '1024x1024');
+    const png = fs.readFileSync(path.join(ROOT, set, images[0].filename));
+    assert.equal(png.readUInt32BE(16), 1024, `${set}: ширина значка`);
+    assert.equal(png.readUInt32BE(20), 1024, `${set}: высота значка`);
+    // значок приложения не бывает прозрачным: в заголовке PNG тип цвета 2 — RGB без альфа-канала
+    assert.equal(png[25], 2, `${set}: значок с прозрачностью`);
+  }
+});
+
+test('значок приложения на Swift рисуется из значка веб-приложения', () => {
+  const source = read('icons/icon.svg');
+  const full = iconSvg(source, 1);
+  assert.match(full, /<rect width="512" height="512" fill="#256abf"\/>/);
+  assert.ok(!full.includes('rx='), 'углы значка скругляет система');
+  assert.ok(full.includes('M176 256h160'), 'гантель та же, что на значке веб-приложения');
+  // на часах гантель меньше и стоит по центру
+  assert.match(iconSvg(source, 0.5), /translate\(128\.00 128\.00\) scale\(0\.5\)/);
+  assert.throws(() => iconSvg('<svg/>', 1), /устроен не так/);
 });
 
 test('фотографии тренажёров для приложения на Swift лежат в img/machines', () => {

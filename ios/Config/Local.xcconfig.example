@@ -1,0 +1,6 @@
+// Скопируйте этот файл в Local.xcconfig и впишите свою команду разработчика:
+// её десятизначный номер виден в Xcode → Settings → Accounts и на developer.apple.com.
+DEVELOPMENT_TEAM = XXXXXXXXXX
+
+// Если идентификатор приложения уже занят другой командой, задайте свой:
+// APP_BUNDLE_ID = com.example.gymjournal
