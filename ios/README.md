@@ -33,7 +33,9 @@ Apple Watch ◄── состояние дня ── iPhone
 ## Собрать и запустить
 
 Нужны Mac с Xcode 26 и [XcodeGen](https://github.com/yonaskolb/XcodeGen) 2.38 или новее.
-Приложения работают на iOS 17 и watchOS 10 и новее.
+Приложения работают на iOS 17 и watchOS 10 и новее. Собраны и проверены в Xcode 26.6. Часы с
+watchOS 27 подключаются к Mac только из Xcode 27 (см. [docs/ios.md](../docs/ios.md)); в нём
+проект пока не собирали.
 
 ```bash
 cd ios
