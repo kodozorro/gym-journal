@@ -24,7 +24,7 @@ struct RootView: View {
             SheetHost()
         }
         .onAppear {
-            model.start()
+            model.launch()
             model.applyTheme()
         }
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in

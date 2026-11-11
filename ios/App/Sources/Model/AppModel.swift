@@ -149,7 +149,7 @@ final class AppModel: ObservableObject {
     }
 
     /// Запускает всё, что живёт вместе с приложением. Вызывается один раз, когда появился экран.
-    func start() {
+    func launch() {
         guard !started else { return }
         started = true
         monitor.onChange = { [weak self] in self?.networkChanged() }
