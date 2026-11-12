@@ -33,9 +33,7 @@ extension AppModel {
     /// Какие тренировки предложить начать для дня. Пусто — предлагать нечего.
     func workoutOffer(for day: JournalDay) -> [WorkoutKind] {
         guard settings.health, health != nil || demo != nil, workout == nil, isLive(day.date) else { return [] }
-        return WatchLink.kinds(for: day.rows).filter { kind in
-            day.rows.contains { row in (kind == .walk) == row.isWalk && !row.isDone }
-        }
+        return WatchLink.offer(for: day.rows)
     }
 
     func startWorkout(_ kind: WorkoutKind, date: String) {
@@ -172,6 +170,7 @@ extension AppModel {
     }
 
     private func finished(_ summary: WorkoutSummary, askWalk: Bool) {
+        lastWorkout = summary
         showToast(summary.saved ? "Тренировка сохранена в «Здоровье»" : "Тренировка не сохранилась в «Здоровье»")
         if summary.kind == .walk, askWalk {
             pendingWalk = summary
@@ -190,8 +189,138 @@ extension AppModel {
             row.key, .add,
             km: summary.km.map { Numbers.roundTo($0, 2) },
             minutes: minutes > 0 ? minutes : nil,
-            sub: "Тренировка шла \(Numbers.format(minutes, digits: 0)) мин. Проверьте числа перед записью."
+            sub: "Тренировка шла \(Numbers.format(minutes, digits: 0)) мин. Проверьте числа перед записью.",
+            // тренировка не сохранилась: в «Здоровье» ходьбу запишет сам отрезок
+            tracked: summary.saved
         )
+    }
+
+    // MARK: Ходьба отрезком
+
+    /// Отрезок ходьбы, записанный вручную на телефоне или на часах, попадает в «Здоровье» как
+    /// тренировка «Ходьба»: она кончается в момент записи и длится столько минут, сколько в
+    /// отрезке, километры идут в неё расстоянием. Шаги, пульс и калории телефон не выдумывает.
+    /// - Parameters:
+    ///   - end: когда отрезок записали.
+    ///   - fromWatch: отрезок записали на часах: подсказок о нём телефон не показывает.
+    ///   - afterSheet: отрезок только что ввели в окне, и оно ещё закрывается.
+    func logWalk(
+        _ key: String, km: Double?, minutes: Double?, end: Date, fromWatch: Bool = false, afterSheet: Bool = false
+    ) {
+        guard settings.health, health != nil, let row = engine.row(for: key), row.isWalk, isLive(row.date) else { return }
+        // ходьба идёт или запускается: её время уже пишется
+        if workout?.kind == .walk || workoutPending == .walk { return }
+        let indoor = WatchLink.isIndoorWalk(sync.journal.filter { $0.date == row.date })
+        switch WalkLog.outcome(km: km, minutes: minutes, end: end, indoor: indoor, last: lastWorkout) {
+        case .noMinutes:
+            if !fromWatch, (km ?? 0) > 0 { showToast("Без минут отрезок в «Здоровье» не записан") }
+        case .covered:
+            // эту ходьбу только что сохранила тренировка
+            break
+        case .save(let entry):
+            walkQueue.append(entry)
+            storage.save(walkQueue, for: "walks")
+            flushWalks(afterSheet: afterSheet)
+        }
+    }
+
+    /// Запуск и возврат в приложение: ходьба, которая ждала в очереди, и вопрос о расстоянии.
+    func healthWake() {
+        if walkQueue.isEmpty {
+            askDistanceAccess()
+        } else {
+            flushWalks()
+        }
+    }
+
+    /// Писать расстояние приложение научилось позже, чем тренировки. У тех, кто тренировки уже
+    /// разрешил, «Здоровье» один раз спросит о нём при входе в приложение. На свежей установке
+    /// вопрос задаётся как раньше: с первой тренировкой или первым отрезком.
+    private func askDistanceAccess() {
+        guard settings.health, let health, !askingDistance, !walksFlushing, health.access == .granted,
+              health.distanceUnasked, UIApplication.shared.applicationState == .active else { return }
+        askingDistance = true
+        Task {
+            _ = await health.requestAccess()
+            healthAccess = health.access
+            askingDistance = false
+            if walksAgain {
+                walksAgain = false
+                flushWalks()
+            }
+        }
+    }
+
+    /// Записывает очередь ходьбы в «Здоровье». Двух разборов очереди одновременно не бывает.
+    func flushWalks(afterSheet: Bool = false) {
+        guard let health else { return }
+        if walksFlushing || askingDistance {
+            walksAgain = true
+            return
+        }
+        let fresh = WalkLog.fresh(walkQueue, now: now())
+        if fresh != walkQueue {
+            walkQueue = fresh
+            storage.save(walkQueue, for: "walks")
+        }
+        guard !walkQueue.isEmpty else { return }
+        walksFlushing = true
+        let hold = BackgroundHold()
+        hold.begin()
+        Task {
+            await writeWalks(health, afterSheet: afterSheet)
+            hold.end()
+            walksFlushing = false
+            if walksAgain {
+                walksAgain = false
+                flushWalks()
+            }
+        }
+    }
+
+    /// Отрезки с часов приходят в свёрнутое приложение, и телефон при этом может быть заблокирован.
+    /// Там разрешение не спрашивается, а несохранённая ходьба остаётся ждать возврата в приложение.
+    private func writeWalks(_ health: HealthStore, afterSheet: Bool) async {
+        var access = health.access
+        if isOnScreen, access == .unknown || (access == .granted && health.distanceUnasked) {
+            // системный лист «Здоровья» не показывается поверх окна, которое ещё закрывается
+            if afterSheet { try? await Task.sleep(nanoseconds: 500_000_000) }
+            _ = await health.requestAccess()
+            access = health.access
+            healthAccess = access
+        }
+        guard access == .granted else {
+            guard isOnScreen else { return }
+            walkQueue = []
+            storage.save(walkQueue, for: "walks")
+            showToast("Нет доступа к «Здоровью». Разрешите запись тренировок в настройках телефона.")
+            return
+        }
+        var saved = false
+        var lost = false
+        for entry in walkQueue {
+            let done = await health.saveWorkout(
+                kind: .walk, indoor: entry.indoor, start: entry.start, end: entry.end, km: entry.km
+            )
+            // в свёрнутом приложении неудача не окончательна: «Здоровье» может быть закрыто до разблокировки
+            guard done || isOnScreen else { continue }
+            if let index = walkQueue.firstIndex(of: entry) { walkQueue.remove(at: index) }
+            storage.save(walkQueue, for: "walks")
+            if done {
+                saved = true
+            } else {
+                lost = true
+            }
+        }
+        if lost {
+            showToast("Ходьба не сохранилась в «Здоровье»")
+        } else if saved {
+            showToast("Ходьба записана в «Здоровье»")
+        }
+    }
+
+    private var isOnScreen: Bool {
+        UIApplication.shared.applicationState == .active
     }
 
     /// Переключатель «Записывать тренировки в „Здоровье“»: при включении спрашивает разрешение.
@@ -280,11 +409,21 @@ extension AppModel {
             engine.queue(row, fields)
             if wasEmpty, value != nil { follow(key) }
             return true
-        case .weight(let key, _), .walkAdd(let key, _, _, _):
+        case .weight(let key, _):
             guard let row = engine.row(for: key) else { return false }
             let last = Journal.lastTime(sync.journal, for: row)
             guard let fields = WatchLink.patch(for: op.action, row: row, last: last) else { return false }
             engine.queue(row, fields)
+            return true
+        case .walkAdd(let key, let km, let minutes, let workout):
+            guard let row = engine.row(for: key) else { return false }
+            let last = Journal.lastTime(sync.journal, for: row)
+            guard let fields = WatchLink.patch(for: op.action, row: row, last: last) else { return false }
+            engine.queue(row, fields)
+            // отрезок записали на часах вручную: ходьбу в «Здоровье» пишет телефон
+            if workout == nil {
+                logWalk(key, km: km, minutes: minutes, end: min(op.at, now()), fromWatch: true)
+            }
             return true
         case .rest(let timer):
             adoptRest(timer)

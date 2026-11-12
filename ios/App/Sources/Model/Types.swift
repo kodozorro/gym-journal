@@ -111,6 +111,8 @@ struct KeypadState: Equatable {
     var canClear = false
     /// Упражнение, для которого под клавиатурой выбирается шаг веса.
     var stepsFor: String?
+    /// Ходьбу из этого окна уже сохранила тренировка: вторую в «Здоровье» отрезок не создаёт.
+    var tracked = false
 }
 
 struct NoteState: Equatable {

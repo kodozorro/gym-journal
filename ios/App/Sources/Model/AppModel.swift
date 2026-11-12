@@ -72,6 +72,16 @@ final class AppModel: ObservableObject {
     /// Тренировку попросили закончить с телефона: отрезок ходьбы спросит телефон.
     var stopRequested = false
     var pendingWalk: WorkoutSummary?
+    /// Последняя законченная тренировка: отрезок той же ходьбы вторую тренировку не создаёт.
+    var lastWorkout: WorkoutSummary?
+    /// Ходьба, записанная отрезками, которая ещё не попала в «Здоровье».
+    var walkQueue: [WalkEntry] = []
+    /// Очередь ходьбы сейчас записывается: второй раз одновременно её не разбирают.
+    var walksFlushing = false
+    /// Пока очередь записывалась, её попросили разобрать ещё раз.
+    var walksAgain = false
+    /// «Здоровье» сейчас спрашивает о записи расстояния.
+    var askingDistance = false
 
     private var sheetSeq = 0
     private var toastSeq = 0
@@ -136,6 +146,7 @@ final class AppModel: ObservableObject {
             timerEnded = saved.isOver(now: moment)
         }
         watchMemory = storage.load(WatchMemory.self, for: "watch") ?? WatchMemory()
+        walkQueue = storage.load([WalkEntry].self, for: "walks") ?? []
         if let saved = storage.load(LiveWorkout.self, for: "workout") {
             // тренировку, которую телефон вёл сам и не закончил за шесть часов, уже не сохранить честно
             if saved.onWatch || moment.timeIntervalSince(saved.startedAt) < 6 * 3600 {
@@ -170,6 +181,7 @@ final class AppModel: ObservableObject {
         applyTheme()
         updateWakeLock()
         engine.wake(staleAfter: 0)
+        healthWake()
         if let demo { runScene(demo) }
     }
 
@@ -273,6 +285,7 @@ final class AppModel: ObservableObject {
         healthAccess = currentHealthAccess()
         watchStatusChanged()
         presentPendingWalk()
+        healthWake()
     }
 
     /// Разрешение на запись тренировок. В показе с учебными данными «Здоровья» нет, но выглядит всё как с ним.
@@ -417,7 +430,11 @@ final class AppModel: ObservableObject {
     }
 
     /// Окно ввода ходьбы. Отрезок после тренировки приходит уже с минутами и километрами.
-    func openWalk(_ key: String, _ focus: WalkFocus, km: Double? = nil, minutes: Double? = nil, sub: String? = nil) {
+    /// - Parameter tracked: эту ходьбу уже сохранила тренировка: вторую в «Здоровье» писать не нужно.
+    func openWalk(
+        _ key: String, _ focus: WalkFocus, km: Double? = nil, minutes: Double? = nil, sub: String? = nil,
+        tracked: Bool = false
+    ) {
         guard let row = engine.row(for: key) else { return }
         let add = focus == .add
         let done = row.summary
@@ -431,7 +448,7 @@ final class AppModel: ObservableObject {
             title: add ? "Отрезок ходьбы" : row.exercise, sub: sub ?? text,
             .keypad(KeypadState(
                 target: .walk(key: key, add: add), fields: fields, active: focus == .min ? 1 : 0,
-                canClear: !add && (row.km != nil || row.min != nil)
+                canClear: !add && (row.km != nil || row.min != nil), tracked: tracked
             ))
         )
     }
@@ -572,7 +589,14 @@ final class AppModel: ObservableObject {
         case .reps(let key, let index):
             recordSet(key, index, values.first ?? nil)
         case .walk(let key, let add):
-            writeWalk(key, km: values.first ?? nil, min: values.count > 1 ? values[1] : nil, add: add)
+            let km = values.first ?? nil
+            let minutes = values.count > 1 ? values[1] : nil
+            // первая запись минут в строку — тоже отрезок: до неё этой ходьбы в журнале не было
+            let first = !add && engine.row(for: key)?.min == nil && (minutes ?? 0) > 0
+            writeWalk(key, km: km, min: minutes, add: add)
+            if !keypad.tracked, add || first {
+                logWalk(key, km: km, minutes: minutes, end: now(), afterSheet: true)
+            }
         }
         closeSheet()
     }

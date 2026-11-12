@@ -6,7 +6,8 @@ import GymJournalCore
 /// телефоном, когда часов рядом нет.
 ///
 /// Телефон не меряет пульс и калории, поэтому сам он записывает только вид тренировки и её
-/// время. Настоящую тренировку с пульсом ведут часы.
+/// время, а у ходьбы, отмеченной отрезком, ещё и километры этого отрезка. Настоящую тренировку
+/// с пульсом ведут часы.
 final class HealthStore {
     private let store = HKHealthStore()
 
@@ -14,9 +15,14 @@ final class HealthStore {
         HKHealthStore.isHealthDataAvailable()
     }
 
-    /// Что приложение пишет: тренировки.
+    /// Расстояние пешком: приложение пишет его только вместе с ходьбой, отмеченной отрезком.
+    private var distanceType: HKQuantityType {
+        HKQuantityType(.distanceWalkingRunning)
+    }
+
+    /// Что приложение пишет: тренировки и расстояние ходьбы, отмеченной отрезком.
     private var shareTypes: Set<HKSampleType> {
-        [HKObjectType.workoutType()]
+        [HKObjectType.workoutType(), distanceType]
     }
 
     /// Что читают часы во время тренировки: пульс, калории и расстояние. Разрешение у телефона
@@ -27,6 +33,16 @@ final class HealthStore {
             HKQuantityType(.activeEnergyBurned),
             HKQuantityType(.distanceWalkingRunning),
         ]
+    }
+
+    /// О записи расстояния «Здоровье» ещё не спрашивало: это разрешение появилось позже, чем
+    /// разрешение на тренировки.
+    var distanceUnasked: Bool {
+        HealthStore.isAvailable && store.authorizationStatus(for: distanceType) == .notDetermined
+    }
+
+    private var canWriteDistance: Bool {
+        store.authorizationStatus(for: distanceType) == .sharingAuthorized
     }
 
     var access: HealthAccess {
@@ -76,7 +92,9 @@ final class HealthStore {
     }
 
     /// Записывает в «Здоровье» тренировку, которую вёл телефон: вид и время, без пульса и калорий.
-    func saveWorkout(kind: WorkoutKind, indoor: Bool, start: Date, end: Date) async -> Bool {
+    /// - Parameter km: километры ходьбы, отмеченной отрезком: их ввёл пользователь. Если писать
+    ///   расстояние не разрешили или оно не записалось, тренировка сохранится без него.
+    func saveWorkout(kind: WorkoutKind, indoor: Bool, start: Date, end: Date, km: Double? = nil) async -> Bool {
         guard HealthStore.isAvailable, end > start else { return false }
         let builder = HKWorkoutBuilder(
             healthStore: store, configuration: makeConfiguration(kind: kind, indoor: indoor), device: HKDevice.local()
@@ -87,6 +105,18 @@ final class HealthStore {
             }
         }
         guard began else { return false }
+        if kind == .walk, let km, km > 0, canWriteDistance {
+            let distance = HKQuantitySample(
+                type: distanceType, quantity: HKQuantity(unit: .meter(), doubleValue: km * 1000),
+                start: start, end: end, metadata: [HKMetadataKeyWasUserEntered: true]
+            )
+            // расстояние не записалось: тренировка сохранится без него
+            _ = await withCheckedContinuation { (continuation: CheckedContinuation<Bool, Never>) in
+                builder.add([distance]) { success, _ in
+                    continuation.resume(returning: success)
+                }
+            }
+        }
         let ended = await withCheckedContinuation { (continuation: CheckedContinuation<Bool, Never>) in
             builder.endCollection(withEnd: end) { success, _ in
                 continuation.resume(returning: success)
