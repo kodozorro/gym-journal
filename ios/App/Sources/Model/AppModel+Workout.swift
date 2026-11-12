@@ -280,7 +280,7 @@ extension AppModel {
             engine.queue(row, fields)
             if wasEmpty, value != nil { follow(key) }
             return true
-        case .weight(let key, _), .walkAdd(let key, _, _):
+        case .weight(let key, _), .walkAdd(let key, _, _, _):
             guard let row = engine.row(for: key) else { return false }
             let last = Journal.lastTime(sync.journal, for: row)
             guard let fields = WatchLink.patch(for: op.action, row: row, last: last) else { return false }

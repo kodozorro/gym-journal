@@ -98,6 +98,37 @@ final class WatchLinkTests: XCTestCase {
         XCTAssertEqual(WatchLink.decode(WatchPacket.self, from: data), packet)
     }
 
+    func testWalkSegmentRemembersItsWorkout() throws {
+        // отрезок, который часы предложили после тренировки, несёт её номер
+        let after = WatchOp(seq: 5, at: at, action: .walkAdd(key: "w", km: 1.5, min: 18, workout: "w1"))
+        let manual = WatchOp(seq: 6, at: at, action: .walkAdd(key: "w", km: 1.5, min: 18))
+        XCTAssertNotEqual(after.action, manual.action)
+        for op in [after, manual] {
+            let data = try XCTUnwrap(WatchLink.encode(op))
+            XCTAssertEqual(WatchLink.decode(WatchOp.self, from: data), op)
+        }
+
+        // так действие выглядело до появления этого поля: оно лежит на часах, а часы могут
+        // обновиться позже телефона. Читается как отрезок, записанный вручную
+        let old = #"{"epoch":"часы-1","intentDone":0,"ops":[{"seq":4,"at":0,"action":{"walkAdd":{"key":"w","km":1.5,"min":18}}},{"seq":5,"at":0,"action":{"walkAdd":{"key":"w","min":7}}}]}"#
+        let packet = try XCTUnwrap(WatchLink.decode(WatchPacket.self, from: Data(old.utf8)))
+        XCTAssertEqual(packet.ops.map { $0.action }, [
+            .walkAdd(key: "w", km: 1.5, min: 18, workout: nil),
+            .walkAdd(key: "w", km: nil, min: 7, workout: nil),
+        ])
+
+        // правка строки от этого поля не зависит
+        let walk = try XCTUnwrap(Fixture.day(today).first { $0.isWalk })
+        XCTAssertEqual(
+            WatchLink.patch(for: .walkAdd(key: walk.key, km: 1.5, min: 18, workout: "w1"), row: walk, last: nil),
+            WatchLink.patch(for: .walkAdd(key: walk.key, km: 1.5, min: 18), row: walk, last: nil)
+        )
+        XCTAssertEqual(WatchLink.rowKey(of: after.action), "w")
+        XCTAssertEqual(WatchLink.apply([after], to: [walk], last: [:]), [walk])
+        let own = WatchOp(seq: 7, at: at, action: .walkAdd(key: walk.key, km: 1.5, min: 18, workout: "w1"))
+        XCTAssertEqual(WatchLink.apply([own], to: [walk], last: [:]).first?.km, 1.5)
+    }
+
     func testWorkoutMinutesAreRounded() {
         let summary = WorkoutSummary(id: "w", kind: .walk, date: today, startedAt: at, endedAt: at.addingTimeInterval(1790))
         XCTAssertEqual(summary.minutes, 30)
@@ -289,6 +320,48 @@ final class WatchLinkTests: XCTestCase {
         outdoor[0].machine = "  "
         XCTAssertTrue(WatchLink.isIndoorWalk(outdoor))
         XCTAssertTrue(WatchLink.isIndoorWalk([]))
+    }
+
+    func testWorkoutOfferFollowsThePlan() throws {
+        var rows = Fixture.day(today)
+        let walk = try XCTUnwrap(rows.firstIndex { $0.isWalk })
+        XCTAssertEqual(rows[walk].plannedKm, 3)
+        XCTAssertEqual(WatchLink.offer(for: rows), [.strength, .walk])
+
+        // ходьбу делят на части, до и после силовой: первый отрезок предложение не снимает
+        rows[walk].km = 1.2
+        rows[walk].min = 15
+        XCTAssertTrue(rows[walk].isDone)
+        XCTAssertEqual(WatchLink.offer(for: rows), [.strength, .walk])
+        rows[walk].km = 2.99
+        XCTAssertEqual(WatchLink.offer(for: rows), [.strength, .walk])
+        // план пройден
+        rows[walk].km = 3
+        XCTAssertEqual(WatchLink.offer(for: rows), [.strength])
+        rows[walk].km = 3.4
+        XCTAssertEqual(WatchLink.offer(for: rows), [.strength])
+
+        // километров в плане нет: ходьба предлагается до первых записанных километров
+        rows[walk].plan = ""
+        XCTAssertNil(rows[walk].plannedKm)
+        XCTAssertEqual(WatchLink.offer(for: rows), [.strength])
+        rows[walk].km = nil
+        XCTAssertEqual(WatchLink.offer(for: rows), [.strength, .walk])
+
+        // силовая предлагается, пока не записана хотя бы одна её строка
+        for index in rows.indices where !rows[index].isWalk {
+            rows[index].weight = 20
+            rows[index].sets = rows[index].sets.map { _ in 12 }
+        }
+        XCTAssertEqual(WatchLink.offer(for: rows), [.walk])
+        let last = try XCTUnwrap(rows.lastIndex { !$0.isWalk })
+        rows[last].sets = rows[last].sets.map { _ in nil }
+        XCTAssertEqual(WatchLink.offer(for: rows), [.strength, .walk])
+
+        XCTAssertEqual(WatchLink.offer(for: Fixture.day("2026-11-26")), [.walk])
+        // день, в котором всё записано
+        XCTAssertEqual(WatchLink.offer(for: Fixture.day("2026-11-23")), [])
+        XCTAssertEqual(WatchLink.offer(for: []), [])
     }
 
     func testStartRequestExpires() {

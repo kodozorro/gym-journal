@@ -176,7 +176,10 @@ public enum WatchAction: Equatable, Codable, Sendable {
     case reps(key: String, index: Int, value: Double?)
     case weight(key: String, value: Double?)
     /// Прибавить отрезок ходьбы к уже записанному.
-    case walkAdd(key: String, km: Double?, min: Double?)
+    /// - Parameter workout: тренировка, после которой часы сами предложили этот отрезок: она уже
+    ///   в «Здоровье». nil — отрезок записали вручную, и ходьбу в «Здоровье» запишет телефон.
+    ///   Действия, записанные до появления этого поля, читаются как записанные вручную.
+    case walkAdd(key: String, km: Double?, min: Double?, workout: String? = nil)
     /// Отдых запущен, продлён или остановлен (nil).
     case rest(RestTimer?)
     case workoutStarted(LiveWorkout)
@@ -312,7 +315,7 @@ public enum WatchLink {
         case .weight(_, let value):
             guard !row.isWalk, row.weight != value else { return nil }
             return RowFields(weight: .set(value))
-        case .walkAdd(_, let km, let min):
+        case .walkAdd(_, let km, let min, _):
             guard row.isWalk else { return nil }
             var fields = RowFields()
             if let km, km > 0 { fields.km = .set(Numbers.roundTo((row.km ?? 0) + km, 2)) }
@@ -326,7 +329,7 @@ public enum WatchLink {
     /// Ключ строки, к которой относится действие.
     public static func rowKey(of action: WatchAction) -> String? {
         switch action {
-        case .reps(let key, _, _), .weight(let key, _), .walkAdd(let key, _, _):
+        case .reps(let key, _, _), .weight(let key, _), .walkAdd(let key, _, _, _):
             return key
         case .rest, .workoutStarted, .workoutEnded:
             return nil
@@ -365,6 +368,22 @@ public enum WatchLink {
         if rows.contains(where: { !$0.isWalk }) { out.append(.strength) }
         if rows.contains(where: { $0.isWalk }) { out.append(.walk) }
         return out
+    }
+
+    /// Какие тренировки предложить начать: силовую, пока есть незаконченная силовая строка, и
+    /// ходьбу, пока её километров меньше, чем в плане. Ходьбу делят на части, до и после силовой,
+    /// поэтому первый отрезок предложение не снимает. Если километров в плане нет, ходьба
+    /// предлагается до первых записанных километров.
+    public static func offer(for rows: [JournalRow]) -> [WorkoutKind] {
+        kinds(for: rows).filter { kind in
+            rows.contains { row in
+                guard (kind == .walk) == row.isWalk else { return false }
+                guard row.isWalk else { return !row.isDone }
+                guard let km = row.km else { return true }
+                guard let planned = row.plannedKm else { return false }
+                return km < planned
+            }
+        }
     }
 
     /// Ходьба идёт по дорожке: тренировка записывается как занятие в помещении.
