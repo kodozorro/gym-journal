@@ -108,7 +108,8 @@ xcodebuild -project GymJournal.xcodeproj -scheme GymJournalWatch -destination 'g
 Приложения на Swift (подробно — в `ios/README.md`):
 
 - `ios/Core/` — пакет `GymJournalCore`: перенос `js/core` и `js/data` на Swift без интерфейса,
-  общий для телефона и часов. `WatchLink.swift` — обмен телефона и часов.
+  общий для телефона и часов. `WatchLink.swift` — обмен телефона и часов. `WalkLog.swift` —
+  ходьба для «Здоровья» по отрезку, записанному вручную.
 - `ios/App/` — приложение для iPhone на SwiftUI. `ios/Watch/` — приложение для часов.
 - `ios/tools/generate.mjs` — делает из кода сайта рисунки, значки, учебный журнал и эталоны, по
   которым тесты Swift сверяют перенос логики.
