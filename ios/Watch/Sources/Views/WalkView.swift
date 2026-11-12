@@ -5,6 +5,8 @@ import GymJournalCore
 //
 // Ходьбу обычно делят на части, до и после силовой, поэтому на часах записывают отрезок: он
 // прибавляется к уже записанному. После тренировки «Ходьба» минуты и километры подставлены сами.
+// Отрезок, записанный вручную, телефон сохраняет ещё и в «Здоровье»: как ходьбу на эти минуты и
+// километры.
 
 struct WalkScreen: View {
     @EnvironmentObject private var model: WatchModel
@@ -138,7 +140,7 @@ struct WalkSegmentSheet: View {
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
                 Button("Записать") {
-                    model.addWalk(prompt.key, km: km, minutes: minutes)
+                    model.addWalk(prompt.key, km: km, minutes: minutes, workout: prompt.workout)
                     dismiss()
                 }
                 .buttonStyle(.watch(.primary))

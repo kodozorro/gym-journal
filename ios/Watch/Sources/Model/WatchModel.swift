@@ -21,6 +21,9 @@ struct WalkPrompt: Identifiable, Equatable {
     var minutes: Double
     /// Пояснение под заголовком.
     var note: String
+    /// Тренировка, после которой часы сами предложили этот отрезок: она уже в «Здоровье».
+    /// nil — отрезок записывают вручную, и ходьбу в «Здоровье» запишет телефон.
+    var workout: String?
 }
 
 /// Окно выбора веса.
@@ -211,10 +214,7 @@ final class WatchModel: ObservableObject {
     /// Какие тренировки предложить начать. Пусто — предлагать нечего.
     var workoutOffer: [WorkoutKind] {
         guard state.health, workouts != nil || demo != nil, workout == nil, state.workout == nil, !stale else { return [] }
-        let day = rows
-        return WatchLink.kinds(for: day).filter { kind in
-            day.contains { row in (kind == .walk) == row.isWalk && !row.isDone }
-        }
+        return WatchLink.offer(for: rows)
     }
 
     // MARK: Обмен с телефоном
@@ -373,18 +373,24 @@ final class WatchModel: ObservableObject {
     }
 
     /// Прибавляет отрезок ходьбы к уже записанному.
-    func addWalk(_ key: String, km: Double, minutes: Double) {
+    /// - Parameter workout: тренировка, после которой часы сами предложили этот отрезок. Отрезок,
+    ///   записанный вручную (nil), телефон запишет ещё и в «Здоровье» как ходьбу.
+    func addWalk(_ key: String, km: Double, minutes: Double, workout: String? = nil) {
         guard !stale, let row = row(key), row.isWalk, km > 0 || minutes > 0 else { return }
         add(.walkAdd(
             key: key,
             km: km > 0 ? Numbers.roundTo(km, 2) : nil,
-            min: minutes > 0 ? Numbers.roundTo(minutes, 1) : nil
+            min: minutes > 0 ? Numbers.roundTo(minutes, 1) : nil,
+            workout: workout
         ))
         feedback?.play(.success)
     }
 
     /// Открывает окно «Отрезок ходьбы». Километры и минуты можно подставить заранее.
-    func askWalk(_ key: String, km: Double? = nil, minutes: Double? = nil, note: String? = nil) {
+    /// - Parameter workout: сохранённая тренировка, после которой предложен отрезок.
+    func askWalk(
+        _ key: String, km: Double? = nil, minutes: Double? = nil, note: String? = nil, workout: String? = nil
+    ) {
         guard let row = row(key), row.isWalk else { return }
         let done = row.summary
         let text = note ?? (done.isEmpty ? "Километры и минуты этого отрезка" : "Прибавится к записанному: \(done)")
@@ -392,7 +398,8 @@ final class WatchModel: ObservableObject {
             key: key,
             km: max(0, Numbers.roundTo(km ?? 0, 2)),
             minutes: max(0, Numbers.roundHalfUp(minutes ?? 0)),
-            note: text
+            note: text,
+            workout: workout
         )
     }
 
@@ -555,7 +562,9 @@ final class WatchModel: ObservableObject {
         let minutes = summary.minutes
         askWalk(
             row.key, km: summary.km, minutes: minutes,
-            note: "Тренировка шла \(Numbers.format(minutes, digits: 0)) мин. Сверьте числа с дорожкой."
+            note: "Тренировка шла \(Numbers.format(minutes, digits: 0)) мин. Сверьте числа с дорожкой.",
+            // тренировка не сохранилась: в «Здоровье» ходьбу запишет телефон по самому отрезку
+            workout: summary.saved ? summary.id : nil
         )
     }
 
@@ -657,7 +666,10 @@ final class WatchModel: ObservableObject {
         case "segment":
             if let walk {
                 path = [.walk(walk.key)]
-                askWalk(walk.key, km: 1.52, minutes: 18, note: "Тренировка шла 18 мин. Сверьте числа с дорожкой.")
+                askWalk(
+                    walk.key, km: 1.52, minutes: 18, note: "Тренировка шла 18 мин. Сверьте числа с дорожкой.",
+                    workout: "demo"
+                )
             }
         case "workout", "live":
             workout = LiveWorkout(
